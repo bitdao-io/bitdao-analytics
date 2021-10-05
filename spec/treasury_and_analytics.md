@@ -20,7 +20,7 @@ for performance and flexibility, and likely requires rebuilding).
 
 Data retrieval:
 
-- A serverless code executable retrieves token quantities and spot prices once a day. 
+- A serverless code executable retrieves token quantities and spot prices once a day.
 - Retrieved values are saved to S3 (as CSV or JSON) using the following filename convention:
     - {token}-{yyyy}-{mm}-{dd}.json- If spot prices are pulled from multiple sources, use the
       following filename convention:
@@ -48,14 +48,16 @@ Data retrieval:
 | price | Decimal | Price of token: must accommodate exactly 2 decimal places, greater than 0, less than 5,000 |
 | source | String | The url where this row's value was obtained, e.g., https://coinmarketcap.com/currencies/bitdao/ | 
 
-
 ## Building daily static page
 
 Procedure to build static page:
 
-1. Retrieve token spot price S3
-2. Retrieve token amount from BitDAO treasury
-3. Generate the static page with links pointing to the latest data files
+1. Retrieve token spot price and store on S3
+   1. Copy content of existing data file and store with a new name
+2. Retrieve token amounts from BitDAO treasury
+    1. Copy content of existing data file and store with a new name
+3. Generate the static html page with links pointing to the latest data files
+4. Include analytics javascript library to allow online aggregation 
 
 ## Treasury, Holdings
 
@@ -68,11 +70,47 @@ Display current ERC-20 token balance of the following coins:
 
 ## Treasury, Inbound
 
-Display
+- Should support reconciliation
+- Reconciliation should not change past events and their computation
+    - historical values should be hard coded
+- Should support changing expected contribution amounts, e.g,. 50/50 BTC to ETH vs more tokens.
+    - BitDAO has [pledged](https://docs.bitdao.io/partners/bybit-pledge) 50% ETH, 25% USDT, 25% USDC
+- Day start = UTC 0, Day end = UTC 0
+- USDT and USDC price will be $1.00 for simplicity
+- Other Asset price feed based on Index Price (currently the weighted average of Kraken, Gemini,
+  Coinbase Pro, Bittrex, and Bitstamp spot pairs) as described
+  here https://help.bybit.com/hc/en-us/articles/360039261094
+- Expected value sources can vary, currently includes:
+    - ByBit
+        - Futures products only (linear and inverse perpetual contracts, quarterly futures
+          contracts, etc.)
+        - Initial Contributed Asset mix: 50% ETH, 25% USDT, 25% USDC
+        - Daily trade volume as provided by Bybit API to CoinGecko
+        - Daily trade volume converted to units of each Contributed Asset at end of day's CoinGecko
+          price
+        - Contribution start date: July 15, 2021
+        - At the start, the injections will be monthly. Based on the cumulative units of each
+          Contributed Asset (derived from the daily calculations).
+        - Contributions from Bybit will come from the following wallets:
+          0x6a159503e49ddB8E49659D6CACf5236aC4213D86
+
+### An Example
+
+- Day trade volume $10,000,000,000
+- ETH price $2,500, USDT price $1, USDC price $1
+- Daily contribution value (2.5bps) = $2,500,000
+- Asset to be contributed = 500 ETH units, 625,000 USDT units, 625,000 USDC units
 
 ## Treasury, Outbound
 
+- Should support some form of reconciliation
+- Reconciliation should not change past events and their computation
+    - historical values should be hard coded
+
 ### Data Sources
+
+- support 1+ spot price feed sources
+- support spot price feed period
 
 Use the following sources to retrieve token quantities:
 

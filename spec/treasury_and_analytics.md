@@ -22,9 +22,11 @@ Data retrieval:
 
 - A serverless code executable retrieves token quantities and spot prices once a day.
 - Retrieved values are saved to S3 (as CSV or JSON) using the following filename convention:
-    - {token}-{yyyy}-{mm}-{dd}.json- If spot prices are pulled from multiple sources, use the
-      following filename convention:
-- Optional: Retrieve spot prices from multiple sources and store in the same file
+  - {token}-{yyyy}-{mm}-{dd}.json
+- If spot prices are pulled from multiple sources, use the
+  following filename convention:
+  - {source}-{token}-{yyyy}-{mm}-{dd}.json
+- Optional: Retrieve spot prices from multiple sources and store in the same file, simply add a source field
 
 #### Token quantity specification:
 

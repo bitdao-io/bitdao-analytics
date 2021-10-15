@@ -6,7 +6,11 @@ const requestOptions = {
   uri: 'https://api.coingecko.com/api/v3/simple/token_price/ethereum',
   qs: {
     'contract_addresses': '0xdAC17F958D2ee523a2206206994597C13D831ec7',
-    'vs_currencies': 'USD'
+    'vs_currencies': 'USD',
+    'include_market_cap': 'true',
+    'include_24hr_vol': 'true',
+    'include_24hr_change': 'true',
+    'include_last_updated_at': 'true'
   },
   json: true,
   gzip: true

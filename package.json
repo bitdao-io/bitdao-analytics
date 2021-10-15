@@ -1,0 +1,21 @@
+{
+  "name": "bitdao-analytics-task",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "data": "node src/app.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "aws-sdk": "^2.1005.0",
+    "coingecko-api": "^1.0.10",
+    "dotenv": "^10.0.0",
+    "request": "^2.88.2",
+    "request-promise": "^4.2.6",
+    "web3": "^1.6.0"
+  }
+}

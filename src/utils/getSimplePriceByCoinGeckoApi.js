@@ -63,9 +63,3 @@ function getContent(token, quantity, price, volume) {
 module.exports = {
   getSimplePrice: getSimplePrice
 }
-
-symbol=ETH, balance=138714.898473120426836325, price=3946.72, usd_24h_vol=21281512772.75
-symbol=BIT, balance=1000000020, price=1.80, usd_24h_vol=104164108.43
-symbol=USDT, balance=56735771, price=1.00, usd_24h_vol=75964195874.95
-symbol=USDC, balance=56735672, price=1.00, usd_24h_vol=2960198154.44
-symbol=xSUSHI, balance=2132234.813768734, price=13.44, usd_24h_vol=7917493.90

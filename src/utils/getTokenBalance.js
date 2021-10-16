@@ -3,8 +3,8 @@ const {
     tokens,
     erc20MinABI
 } = require('./constants.js')
-const uploadS3 = require('./uploadS3');
-const dateUtils = require('./dateUtils');
+const tokenPriceUtils = require('./getTokenPriceByCoinGeckoApi');
+const simplePriceUtils = require('./getSimplePriceByCoinGeckoApi');
 
 const Web3 = require('web3');
 const rpcURL = process.env.MAIN_RPC_URL
@@ -39,12 +39,11 @@ async function getEthBalance() {
 async function getTokensBalance() {
     let errorOccur
     for (var i = 0; i < tokens.length; i++) {
+        let tokenBalance;
         if (tokens[i].symbol === 'ETH') {
             // get balance of ETH
             await getEthBalance().then(function (etherBalance) {
-                const fileName = getFileName(tokens[i].symbol)
-                const content = getContent(tokens[i].symbol, etherBalance);
-                uploadS3.uploadFile(fileName, JSON.stringify(content));
+                tokenBalance = etherBalance;
             }).catch((err) => {
                 console.log('get ether balance error:', err);
                 errorOccur = true
@@ -52,37 +51,20 @@ async function getTokensBalance() {
         } else {
             // get balance of other ERC20 token
             await getBalance(tokens[i].tokenAddress).then(function (balance) {
-                const fileName = getFileName(tokens[i].symbol)
-                const content = getContent(tokens[i].symbol, balance);
-                uploadS3.uploadFile(fileName, JSON.stringify(content));
+                tokenBalance = balance;
             }).catch((err) => {
                 console.log('get erc20 balance error:', err);
                 errorOccur = true
             });
         }
+        // get price of ETH
+        if (tokens[i].symbol === 'ETH') {
+            await simplePriceUtils.getSimplePrice(tokens[i].symbol, tokenBalance)
+            continue;
+        }
+        // get price of other ERC20 token
+        await tokenPriceUtils.getTokenPrice(tokens[i].symbol, tokenBalance, tokens[i].tokenAddress)
     }
-}
-
-function getFileName(token) {
-    const year = dateUtils.getYear()
-    const month = dateUtils.getMonth()
-    const day = dateUtils.getDay()
-    return `${token}-${year}-${month}-${day}.json`;
-}
-
-function getContent(token, quantity) {
-    const year = dateUtils.getYear()
-    const month = dateUtils.getMonth()
-    const day = dateUtils.getDay()
-    let content = {
-        yyyy: year,
-        mm: month,
-        dd: day,
-        token: token,
-        quantity: quantity,
-        source: 'https://etherscan.io/address/0x78605df79524164911c144801f41e9811b7db73d'
-    }
-    return content;
 }
 
 module.exports = {

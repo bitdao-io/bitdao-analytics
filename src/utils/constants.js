@@ -1,8 +1,7 @@
 module.exports = {
     tokens: [
         {
-            symbol: 'ETH',
-            tokenAddress: '0x0000000000000000000000000000000000000000'
+            symbol: 'ETH'
         },
         {
             symbol: 'BIT',

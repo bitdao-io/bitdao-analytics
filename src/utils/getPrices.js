@@ -7,10 +7,6 @@ function coingeckoOptions(path, otherQs) {
         uri: 'https://api.coingecko.com/api/v3/simple/' + path,
         qs: {
             'vs_currencies': 'USD',
-            'include_market_cap': 'true',
-            'include_24hr_vol': 'true',
-            'include_24hr_change': 'true',
-            'include_last_updated_at': 'true'
         },
         json: true,
         gzip: true

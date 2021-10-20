@@ -29,6 +29,12 @@ const dateUtils = {
             day = '0' + day;
         }
         return day;
+    },
+    getToday: function () {
+        const year = dateUtils.getYear();
+        const month = dateUtils.getMonth();
+        const day = dateUtils.getDay();
+        return year + "-" + month + "-" + day;
     }
 }
 
@@ -36,4 +42,5 @@ module.exports = {
     getYear: dateUtils.getYear,
     getMonth: dateUtils.getMonth,
     getDay: dateUtils.getDay,
+    getToday: dateUtils.getToday
 }

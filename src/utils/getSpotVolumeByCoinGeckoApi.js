@@ -2,6 +2,7 @@ require("dotenv").config({ path: '../../.env' });
 const rp = require('request-promise');
 const dateUtils = require('./dateUtils');
 const uploadS3 = require('./uploadS3');
+const fs = require('fs')
 
 async function getByBitSpotVolume() {
     const requestOptions = {
@@ -71,12 +72,7 @@ function getFileName() {
 
 function getContent(tradeVolume, contributeVolume, ethAmount, ethPrice, ethCount, usdtAmount, usdcAmount) {
     const today = dateUtils.getToday()
-    let content = {}
-    content.success = true;
-    content.message = null;
-    let body = {}
-    let list = []
-    let todayData = {
+    let content = {
         ethCount: ethCount,
         ethPrice: ethPrice.toFixed(0),
         ethAmount: ethAmount,
@@ -88,10 +84,6 @@ function getContent(tradeVolume, contributeVolume, ethAmount, ethPrice, ethCount
         contributeVolume: contributeVolume,
         date: today
     }
-    list.push(todayData)
-    body.list = list
-    body.ethPrice = ethPrice.toFixed(0)
-    content.body = body
     return content;
 }
 

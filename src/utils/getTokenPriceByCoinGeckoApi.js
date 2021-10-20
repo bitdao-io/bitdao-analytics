@@ -1,6 +1,6 @@
 require("dotenv").config({ path: '../../.env' });
 const rp = require('request-promise');
-const uploadS3 = require('./uploadS3');
+const uploadS3 = require('./s3');
 const dateUtils = require('./dateUtils');
 
 async function getTokenPrice(symbol, balance, tokenAddress) {

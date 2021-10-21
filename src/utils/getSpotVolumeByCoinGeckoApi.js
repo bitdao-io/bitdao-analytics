@@ -1,8 +1,6 @@
-require("dotenv").config({ path: '../../.env' });
 const rp = require('request-promise');
 const dateUtils = require('./dateUtils');
-const uploadS3 = require('./uploadS3');
-const fs = require('fs')
+const uploadS3 = require('./s3');
 
 async function getByBitSpotVolume() {
     const requestOptions = {
@@ -87,6 +85,4 @@ function getContent(tradeVolume, contributeVolume, ethAmount, ethPrice, ethCount
     return content;
 }
 
-module.exports = {
-    getByBitSpotVolume: getByBitSpotVolume
-}
+module.exports = getByBitSpotVolume;

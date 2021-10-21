@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "data": "node src/app.js"
+    "data": "node src/app.js",
+    "lambda-update-api-s3": "node -e \"console.log(require('./src/lambdas/updateAPIS3').handler(require('./scripts/update-api-lambda-cli-test-event.json')));\""
+
   },
   "keywords": [],
   "author": "",

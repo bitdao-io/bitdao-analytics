@@ -1,0 +1,25 @@
+{
+  "name": "bitdao-analytics-task",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "data": "node src/app.js",
+    "lambda-update-api-s3": "node -e \"console.log(require('./src/lambdas/updateAPIS3').handler(require('./scripts/update-api-lambda-cli-test-event.json')));\"",
+    "treasury": "node src/utils/getTreasuryBalances.mjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "alasql": "^1.7.3",
+    "aws-sdk": "^2.1005.0",
+    "coingecko-api": "^1.0.10",
+    "dotenv": "^10.0.0",
+    "node-fetch": "^3.0.0",
+    "request": "^2.88.2",
+    "request-promise": "^4.2.6",
+    "web3": "^1.6.0"
+  }
+}

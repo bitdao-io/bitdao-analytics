@@ -6,7 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "data": "node src/app.js",
-    "lambda-update-api-s3": "node -e \"console.log(require('./src/lambdas/updateAPIS3').handler(require('./scripts/update-api-lambda-cli-test-event.json')));\"",
+    "lambda-update-api-s3": "ts-node -e \"import handler from './src/lambdas/updateAPIS3'; import json from './scripts/update-api-lambda-cli-test-event.json';console.log(handler());\"",
     "treasury": "node src/utils/getTreasuryBalances.mjs"
   },
   "keywords": [],
@@ -20,6 +20,8 @@
     "node-fetch": "^3.0.0",
     "request": "^2.88.2",
     "request-promise": "^4.2.6",
+    "ts-node": "^10.4.0",
+    "typescript": "^4.5.3",
     "web3": "^1.6.0"
   }
 }

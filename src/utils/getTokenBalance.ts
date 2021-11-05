@@ -1,10 +1,12 @@
+import Web3 from "web3";
+
 const {
     tokens,
     erc20MinABI
-} = require('./constants.js');
+} = require('./constants.ts');
 
-const tokenPriceUtils = require('./getTokenPriceByCoinGeckoApi');
-const simplePriceUtils = require('./getSimplePriceByCoinGeckoApi');
+import {Token} from "../models";
+
 
 /**
  * Get erc20 token balance.
@@ -13,7 +15,7 @@ const simplePriceUtils = require('./getSimplePriceByCoinGeckoApi');
  * @param tokenAddr erc20 token address to get balance of
  * @returns balance of erc20
  */
-async function getBalance(web3, walletAddr, tokenAddr) {
+async function getBalance(web3:any, walletAddr:string, tokenAddr:string) {
     const contract = new web3.eth.Contract(erc20MinABI, tokenAddr);
     const decimals = await contract.methods.decimals().call();
     const balance = await contract.methods.balanceOf(walletAddr).call();
@@ -22,11 +24,11 @@ async function getBalance(web3, walletAddr, tokenAddr) {
 
 /**
  * Get ETH balance of account.
- * @param web3 a Web3 instance
+ * @param web3 is a Web3 instance
  * @param walletAddr wallet address to get balance of
  * @returns balance of ether
  */
-async function getEthBalance(web3, walletAddr) {
+async function getEthBalance(web3:Web3, walletAddr:string) {
     const etherBalance = await web3.eth.getBalance(walletAddr);
     return parseFloat(web3.utils.fromWei(etherBalance, 'ether')).toFixed(18);
 }
@@ -36,23 +38,23 @@ async function getEthBalance(web3, walletAddr) {
  * @param token is a Token object
  * @returns getter function
  */
-function balanceGetterForCurrency(token) {
+function balanceGetterForCurrency(token:Token) {
     if (token.address) {
-        return (web3, walletAddr) => getBalance(web3, walletAddr, token.address);
+        return (web3:Web3, walletAddr:string) => getBalance(web3, walletAddr, token.address);
     }
     return getEthBalance;
 }
 /**
  * Get balances for all currencies.
- * @param conns is a Connections object
+ * @param web3 is a Web3 instance
  * @param walletAddr wallet address to get balance of
  * @returns balance of ether
  */
-async function getBalances(conns, walletAddr) {
-    let balances = {};
+async function getBalances(web3:Web3, walletAddr:string) {
+    let balances:any = {};
 
-    await Promise.all(tokens.map(async token => {
-        return balanceGetterForCurrency(token)(conns.web3, walletAddr).then((balance) => {
+    await Promise.all(tokens.map(async (token:Token) => {
+        return balanceGetterForCurrency(token)(web3, walletAddr).then((balance) => {
             balances[token.symbol] = balance;
         }).catch((err) => {
             console.log('get balance error:', err);

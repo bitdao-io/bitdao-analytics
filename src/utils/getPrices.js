@@ -1,4 +1,4 @@
-const { tokens } = require('./constants.js');
+const { tokens } = require('./constants.ts');
 const rp = require('request-promise');
 
 function coingeckoOptions(path, otherQs) {

@@ -13,8 +13,7 @@ const ContributionsShares = {
     usdc: 0.25,
 };
 
-async function getContributionsForHistoricalVolumes() {
-    const prices = await getCurrentPrices();
+export async function getContributionsForHistoricalVolumes() {
     const volumes = await getTradeVolumeChart();
     const btcPrices = await getHistoricalPrices('bitcoin');
     const ethPrices = await getHistoricalPrices('ethereum');
@@ -23,12 +22,12 @@ async function getContributionsForHistoricalVolumes() {
     for (let i = 0; i < volumes.length; i++) {
         let date = new Date();
         date.setDate(date.getUTCDate() - (volumes.length - i - 1));
-        contributions.push(getContributionForBTCVolume({
+        contributions.unshift(getContributionForBTCVolume({
             btc: btcPrices[i],
             eth: ethPrices[i],
         }, volumes[i], date));
     }
-    return contributions.reverse();
+    return contributions;
 }
 
 class Prices {
@@ -36,8 +35,8 @@ class Prices {
     eth: number;
 }
 
-function getContributionForBTCVolume(prices: Prices, tradeVolumeInBTC: Number, date: Date) : Contribution{
-    const contributionVolumeInUSD = prices.btc * tradeVolumeInBTC.valueOf() * ContributionBPS;
+function getContributionForBTCVolume(prices: Prices, tradeVolumeInBTC: number, date: Date) : Contribution{
+    const contributionVolumeInUSD = prices.btc * tradeVolumeInBTC * ContributionBPS;
 
     const ethAmount = contributionVolumeInUSD * ContributionsShares.eth;
     const ethCount = ethAmount / prices.eth;
@@ -55,17 +54,11 @@ function getContributionForBTCVolume(prices: Prices, tradeVolumeInBTC: Number, d
         usdcAmount: parseFloat(usdcAmount),
         usdcCount: parseFloat(usdcAmount),
 
-        tradeVolume: parseFloat((prices.btc * tradeVolumeInBTC.valueOf()).toFixed(0)),
+        tradeVolume: parseFloat((prices.btc * tradeVolumeInBTC).toFixed(0)),
         contributeVolume: parseFloat(contributionVolumeInUSD.toFixed(0)),
 
         date: formatDate(date),
     };
-}
-
-export async function getExpectedContribution() {
-    const prices = await getCurrentPrices();
-    const tradeVolumeInBTC = await getTradeVolume();
-    return getContributionForBTCVolume(prices, tradeVolumeInBTC.valueOf(), new Date());
 }
 
 async function getHistoricalPrices(coinID: string) {
@@ -87,7 +80,6 @@ async function getHistoricalPrices(coinID: string) {
         return response.prices.map((price: any) => price[1]);
     }).catch((err: any) => console.log('API call error:', err.message))
 }
-
 
 async function getCurrentPrices() {
     return rp({
@@ -133,4 +125,10 @@ async function getTradeVolumeChart() {
     }).catch((err: any) => console.log('getTradeVolumeChart API call error:', err.message));
 }
 
-export default {getExpectedContribution};
+export async function getExpectedContribution() {
+    const prices = await getCurrentPrices();
+    const tradeVolumeInBTC = await getTradeVolume();
+    return getContributionForBTCVolume(prices, tradeVolumeInBTC, new Date());
+}
+
+export default {getExpectedContribution, getContributionsForHistoricalVolumes};

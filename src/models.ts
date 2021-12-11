@@ -8,7 +8,7 @@ export class Chart {
     body: ChartBody;
 }
 
-class ChartBody {
+export class ChartBody {
     list: Contribution[];
 }
 

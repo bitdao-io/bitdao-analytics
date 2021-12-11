@@ -1,11 +1,12 @@
-import S3 from "aws-sdk/clients/s3";
+import S3, {CacheControl} from "aws-sdk/clients/s3";
 
 async function uploadFile(s3:S3, bucketName:string, fileName:string, content:string) : Promise<string> {
     return (await s3.putObject({
         Bucket: bucketName,
         Key: fileName,
         Body: content,
-        ACL: 'public-read'
+        ACL: 'public-read',
+        CacheControl: '300'
     }).promise()).VersionId;
 }
 

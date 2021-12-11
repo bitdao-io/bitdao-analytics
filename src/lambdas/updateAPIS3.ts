@@ -4,8 +4,8 @@ import {newConnections} from '../connections';
 import getAPIBalance from '../api/getBalance';
 import getChart from '../api/getChart';
 
-import {uploadFile} from '../utils/s3';
-import {formatDate} from '../utils/dateUtils';
+import {uploadFile} from '../s3';
+import {formatDate} from '../dateUtils';
 
 const config = newConfigFromEnv();
 const conns = newConnections(config);

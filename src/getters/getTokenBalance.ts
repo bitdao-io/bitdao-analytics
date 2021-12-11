@@ -3,7 +3,7 @@ import Web3 from "web3";
 const {
     tokens,
     erc20MinABI
-} = require('./constants.ts');
+} = require('../constants.ts');
 
 import {Token} from "../models";
 

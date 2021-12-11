@@ -1,5 +1,5 @@
 const rp = require('request-promise');
-import {formatDate} from './dateUtils'
+import {formatDate} from '../dateUtils'
 import {Contribution} from "../models";
 
 // ContributionBPS is the bps of trade volume we expect to be contributed.

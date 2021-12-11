@@ -1,8 +1,9 @@
-const { tokens } = require('./constants.ts');
+const {tokens} = require('../constants.ts');
 const rp = require('request-promise');
+import {Token} from "../models";
 
-function coingeckoOptions(path, otherQs) {
-    let opts = {
+function coingeckoOptions(path: string, otherQs: any) {
+    let opts: any = {
         method: 'GET',
         uri: 'https://api.coingecko.com/api/v3/simple/' + path,
         qs: {
@@ -20,29 +21,29 @@ function coingeckoOptions(path, otherQs) {
 }
 
 async function getEthPrice() {
-    return rp(coingeckoOptions('price', {'ids': 'ethereum'})).then(resp => {
+    return rp(coingeckoOptions('price', {'ids': 'ethereum'})).then((resp: any) => {
         return resp.ethereum.usd.toFixed(2);
     });
 }
 
-async function getTokenPrice(addr) {
+async function getTokenPrice(addr: string) {
     const opts = coingeckoOptions('token_price/ethereum', {'contract_addresses': addr});
-    return rp(opts).then(resp => {
+    return rp(opts).then((resp: any) => {
         const tokenJson = resp[addr.toLocaleLowerCase()];
         return tokenJson.usd.toFixed(2);
     });
 }
 
 
-async function getPrices() {
-    const handleError = (err) => {
+export async function getPrices() {
+    const handleError = (err: any) => {
         console.log('Coingecko call error:', err.message);
         return 0;
     };
 
-    let prices = {'ETH': await getEthPrice().catch(handleError)};
+    let prices: any = {'ETH': await getEthPrice().catch(handleError)};
 
-    await Promise.all(tokens.map(async token => {
+    await Promise.all(tokens.map(async (token: Token) => {
         if (token.address) {
             prices[token.symbol] = await getTokenPrice(token.address).catch(handleError);
         }
@@ -51,4 +52,4 @@ async function getPrices() {
     return prices;
 }
 
-module.exports = getPrices;
+export default {getPrices};

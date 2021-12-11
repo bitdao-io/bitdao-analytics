@@ -1,7 +1,7 @@
-const getBalances = require('../utils/getTokenBalance');
-const getPrices = require('../utils/getPrices');
-const {tokens} = require("../utils/constants");
+const getBalances = require('../getters/getTokenBalance');
 
+import {getPrices} from "../getters/getPrices";
+import {tokens} from "../constants";
 import {Token} from "../models";
 
 export default async function getAPIBalance(conf: any, conns: any) {

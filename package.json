@@ -5,9 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "data": "node src/app.js",
     "lambda-update-api-s3": "ts-node -e \"import handler from './src/lambdas/updateAPIS3'; import json from './scripts/update-api-lambda-cli-test-event.json';console.log(handler());\"",
-    "treasury": "node src/utils/getTreasuryBalances.mjs"
+    "treasury": "node src/getters/getTreasuryBalances.mjs"
   },
   "keywords": [],
   "author": "",

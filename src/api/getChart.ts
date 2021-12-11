@@ -1,6 +1,6 @@
-import {getJSON} from "../utils/s3";
+import {getJSON} from "../s3";
 import {Chart} from "../models";
-import {getExpectedContribution} from "../utils/getExpectedContribution";
+import {getExpectedContribution} from "../getters/getExpectedContribution";
 
 function isTodayOrAfter(d: Date) {
     const today = new Date();

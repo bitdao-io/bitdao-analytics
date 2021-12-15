@@ -1,18 +1,18 @@
-import aws from 'aws-sdk';
-import Web3 from 'web3';
-import {newConfigFromEnv} from "./config";
+import aws
+    from 'aws-sdk';
+import Web3
+    from 'web3';
+import {Config} from "./config";
 
-export function newConnections(config:any) {
+export default function newConnections(config: Config) {
     const s3 = new aws.S3();
-    s3.config.update({ accessKeyId: config.aws.accessKeyID, secretAccessKey: config.aws.secretAccessKey });
+    s3.config.update({
+        accessKeyId: config.s3.accessKeyID,
+        secretAccessKey: config.s3.secretAccessKey
+    });
 
     return {
         s3: s3,
         web3: new Web3(new Web3.providers.HttpProvider(config.web3RPCHost)),
     };
-};
-
-
-export default {
-    newConnections,
 };

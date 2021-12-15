@@ -3,8 +3,9 @@ export class Token {
     address: string;
 }
 
-export class Chart {
-    list: Contribution[];
+export class Prices {
+    btc: number;
+    eth: number;
 }
 
 export class Contribution {
@@ -22,6 +23,6 @@ export class Contribution {
 
 export default {
     Token,
-    Chart,
-    Contribution,
+    Prices,
+    Contribution
 }

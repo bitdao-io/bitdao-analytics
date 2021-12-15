@@ -1,27 +1,28 @@
-import {newConfigFromEnv} from '../config';
-import {newConnections} from '../connections';
-
-import getAPIBalance from '../api/getBalance';
-import getChart from '../api/getChart';
-import {getContributionsForHistoricalVolumes} from '../getters/getExpectedContribution';
+import newConfigFromEnv from '../config';
+import newConnections from '../connections';
 
 import {uploadFile} from '../s3';
 import {formatDate} from '../dateUtils';
 
+import getBalances from '../getters/getBalances';
+import getContributions from "../getters/getContributions";
+
 const config = newConfigFromEnv();
-const conns = newConnections(config);
+const {s3, web3} = newConnections(config);
 
 function run(name: string, func: Function) : Promise<string> {
-    return func(config, conns).then((resp: any) => {
+    return func().then((resp: any) => {
         const json = JSON.stringify({success: true, body: resp});
-        uploadFile(conns.s3, config.aws.bucket, 'analytics/'+name+'.json', json);
-        uploadFile(conns.s3, config.aws.bucket, 'analytics/'+name+'-' + formatDate(new Date()) + '.json', json);
+        uploadFile(s3, config.s3.bucket, 'analytics/'+name+'.json', json);
+        uploadFile(s3, config.s3.bucket, 'analytics/'+name+'-' + formatDate(new Date()) + '.json', json);
     });
 }
 
 export default async function handler() {
     return Promise.all([
-        run('balance', getAPIBalance),
-        run('chart-100-day', getChart),
+        run('balance', () => {
+            return getBalances(web3, config.treasuryAddress);
+        }),
+        run('contributions', getContributions),
     ]);
 }

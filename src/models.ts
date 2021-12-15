@@ -4,11 +4,6 @@ export class Token {
 }
 
 export class Chart {
-    success: boolean;
-    body: ChartBody;
-}
-
-export class ChartBody {
     list: Contribution[];
 }
 
@@ -26,8 +21,7 @@ export class Contribution {
 }
 
 export default {
-    Chart,
-    ChartBody,
-    Contribution,
     Token,
+    Chart,
+    Contribution,
 }

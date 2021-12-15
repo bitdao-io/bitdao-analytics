@@ -1,6 +1,9 @@
 const rp = require('request-promise');
 import {formatDate} from '../dateUtils'
-import {Contribution} from "../models";
+import {
+    Contribution,
+    Prices
+} from "../models";
 
 // ContributionBPS is the bps of trade volume we expect to be contributed.
 const ContributionBPS = 0.00025;
@@ -13,29 +16,14 @@ const ContributionsShares = {
     usdc: 0.25,
 };
 
-export async function getContributionsForHistoricalVolumes() {
-    const volumes = await getTradeVolumeChart();
-    const btcPrices = await getHistoricalPrices('bitcoin');
-    const ethPrices = await getHistoricalPrices('ethereum');
+// ContributionStartTime is the timestamp that the contribution pledge started.
+const ContributionStartTime = 1626307200000;
 
-    let contributions = [];
-    for (let i = 0; i < volumes.length; i++) {
-        let date = new Date();
-        date.setDate(date.getUTCDate() - (volumes.length - i - 1));
-        contributions.unshift(getContributionForBTCVolume({
-            btc: btcPrices[i],
-            eth: ethPrices[i],
-        }, volumes[i], date));
-    }
-    return contributions;
-}
+// ContributionChartLength is the maximum length of the contribution chart
+// stored in S3.
+const ContributionChartLength = 365;
 
-class Prices {
-    btc: number;
-    eth: number;
-}
-
-function getContributionForBTCVolume(prices: Prices, tradeVolumeInBTC: number, date: Date) : Contribution{
+function getContributionForBTCVolume(prices: Prices, tradeVolumeInBTC: number, date: Date): Contribution {
     const contributionVolumeInUSD = prices.btc * tradeVolumeInBTC * ContributionBPS;
 
     const ethAmount = contributionVolumeInUSD * ContributionsShares.eth;
@@ -64,7 +52,7 @@ function getContributionForBTCVolume(prices: Prices, tradeVolumeInBTC: number, d
 async function getHistoricalPrices(coinID: string) {
     let to = new Date();
     let from = new Date();
-    from.setDate(to.getDate() - 100);
+    from.setDate(to.getDate() - ContributionChartLength);
 
     return rp({
         method: 'GET',
@@ -81,43 +69,10 @@ async function getHistoricalPrices(coinID: string) {
     }).catch((err: any) => console.log('API call error:', err.message))
 }
 
-async function getCurrentPrices() {
-    return rp({
-        method: 'GET',
-        uri: 'https://api.coingecko.com/api/v3/simple/price',
-        qs: {
-            'ids': 'bitcoin,ethereum',
-            'vs_currencies': 'USD',
-            'include_market_cap': 'true',
-            'include_24hr_vol': 'true',
-            'include_24hr_change': 'true',
-            'include_last_updated_at': 'true'
-        },
-        json: true,
-        gzip: true
-    }).then((response: any) => {
-        return {
-            btc: Number(response.bitcoin.usd),
-            eth: Number(response.ethereum.usd),
-        };
-    }).catch((err: any) => console.log('API call error:', err.message))
-}
-
-async function getTradeVolume() {
-    return rp({
-        method: 'GET',
-        uri: 'https://api.coingecko.com/api/v3/derivatives/exchanges/bybit',
-        json: true,
-        gzip: true
-    }).then((response: any) => {
-        return Number(response.trade_volume_24h_btc);
-    }).catch((err: any) => console.log('getTradeVolume API call error:', err.message));
-}
-
 async function getTradeVolumeChart() {
     return rp({
         method: 'GET',
-        uri: 'https://api.coingecko.com/api/v3/exchanges/bybit/volume_chart?days=100',
+        uri: 'https://api.coingecko.com/api/v3/exchanges/bybit/volume_chart?days=' + ContributionChartLength,
         json: true,
         gzip: true
     }).then((chart: any) => {
@@ -125,10 +80,24 @@ async function getTradeVolumeChart() {
     }).catch((err: any) => console.log('getTradeVolumeChart API call error:', err.message));
 }
 
-export async function getExpectedContribution() {
-    const prices = await getCurrentPrices();
-    const tradeVolumeInBTC = await getTradeVolume();
-    return getContributionForBTCVolume(prices, tradeVolumeInBTC, new Date());
-}
+export default async function getContributions() {
+    const volumes = await getTradeVolumeChart();
+    const btcPrices = await getHistoricalPrices('bitcoin');
+    const ethPrices = await getHistoricalPrices('ethereum');
 
-export default {getExpectedContribution, getContributionsForHistoricalVolumes};
+    let contributions: any = [];
+    for (let i = 0; i < volumes.length; i++) {
+        let date = new Date();
+        date.setDate(date.getUTCDate() - (volumes.length - i - 1));
+
+        if (date.getTime() < ContributionStartTime) {
+            continue;
+        }
+
+        contributions.unshift(getContributionForBTCVolume({
+            btc: btcPrices[i],
+            eth: ethPrices[i],
+        }, volumes[i], date));
+    }
+    return contributions;
+}

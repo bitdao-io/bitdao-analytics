@@ -10,19 +10,25 @@ export class Prices {
 
 export class Contribution {
     date: string;
-    ethCount: number;
-    ethPrice: number;
-    ethAmount: number;
-    usdtAmount: number;
-    usdtCount: number;
-    usdcAmount: number;
-    usdcCount: number;
     tradeVolume: number;
     contributeVolume: number;
+    // ethCount: number;
+    // ethPrice: number;
+    ethAmount: number;
+    usdtAmount: number;
+    // usdtCount: number;
+    usdcAmount: number;
+    // usdcCount: number;
 }
+
+export class Symbols {
+    inverse: string[]
+    usdtPerpetual: string[]
+};
 
 export default {
     Token,
     Prices,
-    Contribution
+    Contribution,
+    Symbols
 }

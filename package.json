@@ -14,13 +14,15 @@
   "dependencies": {
     "alasql": "^1.7.3",
     "aws-sdk": "^2.1005.0",
+    "bent": "^7.3.12",
     "coingecko-api": "^1.0.10",
+    "dayjs": "^1.10.7",
     "dotenv": "^10.0.0",
-    "node-fetch": "^3.0.0",
-    "request": "^2.88.2",
-    "request-promise": "^4.2.6",
     "ts-node": "^10.4.0",
     "typescript": "^4.5.3",
     "web3": "^1.6.0"
+  },
+  "devDependencies": {
+    "@types/bent": "^7.3.2"
   }
 }

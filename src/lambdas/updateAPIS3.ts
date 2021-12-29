@@ -12,6 +12,8 @@ const {s3, web3} = newConnections(config);
 
 function run(name: string, func: Function) : Promise<string> {
     return func().then((resp: any) => {
+        console.log(resp);
+        return;
         const json = JSON.stringify({success: true, body: resp});
         uploadFile(s3, config.s3.bucket, 'analytics/'+name+'.json', json);
         uploadFile(s3, config.s3.bucket, 'analytics/'+name+'-' + formatDate(new Date()) + '.json', json);
@@ -20,9 +22,9 @@ function run(name: string, func: Function) : Promise<string> {
 
 export default async function handler() {
     return Promise.all([
-        run('balance', () => {
-            return getBalances(web3, config.treasuryAddress);
-        }),
+        // run('balance', () => {
+        //     return getBalances(web3, config.treasuryAddress);
+        // }),
         run('contributions', getContributions),
     ]);
 }

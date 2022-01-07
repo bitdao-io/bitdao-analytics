@@ -97,40 +97,42 @@ async function getSymbols(): Promise<Symbols>{
     return {inverse, usdtPerpetual};
 }
 
-async function loadVolume(symbols: string[], from: number, uriBuilder: any) {
+async function loadVolume(symbols: string[], symbolType: string, from: number) {
     return symbols.reduce<Promise<number>>(async (volume: Promise<number>, symbol: string) =>{
-        let body = (await getJSON(uriBuilder(symbol, from)))['result'];
+        // Get endpoint for this symbol type
+        let uri = inverseURI(symbol, from);
+        if (symbolType === 'perp') {
+            uri = usdtPerpetualsURI(symbol, from);
+        }
+
+        // Load the data
+        let body = (await getJSON(uri))['result'];
         if (!body || !body.length) {
             return await volume;
         }
 
+        // Grab the volume based on the symbol type
         body = body[0];
         let _volume = parseFloat(body['volume']);
-        if (body['id']) {
+        if (symbolType === 'perp') {
             _volume = parseFloat(body['turnover']);
         }
 
-        // if (body['turnover']) {
-        // 	_volume = parseFloat(body['turnover']);
-        // }
-
         console.log(`Loaded ${symbol}: ${_volume} - ${JSON.stringify(body)}`);
+
+        // Accumulate the volume
         return (await volume) + _volume;
     }, Promise.resolve(0));
 }
 
 async function loadVolumeForTimestamp(timestamp: number, symbols: Symbols) {
-    console.log(`timestamp: ${timestamp}`);
-
-    let inverseVolume = await loadVolume(symbols.inverse, timestamp, inverseURI);
-    let perpVolume = await loadVolume(symbols.usdtPerpetual, timestamp, usdtPerpetualsURI);
-
-    console.log(perpVolume, inverseVolume, inverseVolume + perpVolume);
+    let inverseVolume = await loadVolume(symbols.inverse, 'inverse', timestamp);
+    let perpVolume = await loadVolume(symbols.usdtPerpetual, 'perp', timestamp);
     return inverseVolume + perpVolume;
 }
 
 export default async function getContributions() {
-    const currentDateString = dayjs.utc().format('YYYYMMDD');
+    // const currentDateString = dayjs.utc().format('YYYYMMDD');
     const symbols = await getSymbols();
     const contributions: Array<Contribution> = [];
 

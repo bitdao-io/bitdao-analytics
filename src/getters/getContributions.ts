@@ -105,9 +105,9 @@ async function loadVolume(symbols: string[], from: number, uriBuilder: any) {
         }
 
         body = body[0];
-        let _volume = parseInt(body['volume'], 10);
+        let _volume = parseFloat(body['volume']);
         if (body['id']) {
-            _volume *= parseFloat(body['high']);
+            _volume = parseFloat(body['turnover']);
         }
 
         // if (body['turnover']) {

@@ -9,7 +9,13 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 
 dayjs.extend(utc);
-const getJSON = bent('json')
+const newGetJSONRequest = bent('json');
+
+const getJSON = (uri:string) => {
+    let req = newGetJSONRequest(uri);
+    req.catch(() => {});
+    return req;
+};
 
 // ContributionBPS is the bps of trade volume we expect to be contributed.
 const ContributionBPS = 0.00025;
@@ -39,31 +45,29 @@ const usdtPerpetualsURI = (symbol: string, from: number): string => {
     return `https://api.bybit.com/public/linear/kline?interval=D&limit=1&symbol=${symbol}&from=${from}`;
 }
 
-function loadContribution(prices: Prices, tradeVolumeInUSD: number, timestamp: number): Contribution {
+function formatContribution(prices: Prices, tradeVolumeInUSD: number, timestamp: number): Contribution {
     // const contributionVolumeInUSD = prices.btc * tradeVolumeInUSD * ContributionBPS;
     const contributionVolumeInUSD = tradeVolumeInUSD * ContributionBPS;
 
     const ethAmount = contributionVolumeInUSD * ContributionsShares.eth;
     const ethCount = ethAmount / prices.eth;
 
-    const usdtAmount = (contributionVolumeInUSD * ContributionsShares.usdt).toFixed(0);
-    const usdcAmount = (contributionVolumeInUSD * ContributionsShares.usdc).toFixed(0);
+    const usdtAmount = contributionVolumeInUSD * ContributionsShares.usdt;
+    const usdcAmount = contributionVolumeInUSD * ContributionsShares.usdc;
 
     return {
-
         date: dayjs.utc(timestamp*1000).format('YYYY-MM-DD'),
+        ethPrice: parseFloat(prices.eth.toFixed(2)),
+
         tradeVolume: parseFloat(tradeVolumeInUSD.toFixed(0)),
         contributeVolume: parseFloat(contributionVolumeInUSD.toFixed(0)),
 
-
-        // ethCount: parseFloat(ethCount.toFixed(2)),
-        // ethPrice: parseFloat(prices.eth.toFixed(0)),
-        ethAmount: parseFloat(ethAmount.toFixed(0)),
-
-        usdtAmount: parseFloat(usdtAmount),
-        // usdtCount: parseFloat(usdtAmount),
-        usdcAmount: parseFloat(usdcAmount),
-        // usdcCount: parseFloat(usdcAmount),
+        ethAmount: parseFloat(ethAmount.toFixed(2)),
+        ethCount: parseFloat(ethCount.toFixed(2)),
+        usdtAmount: parseFloat(usdtAmount.toFixed(0)),
+        usdtCount: parseFloat(usdtAmount.toFixed(0)),
+        usdcAmount: parseFloat(usdcAmount.toFixed(0)),
+        usdcCount: parseFloat(usdcAmount.toFixed(0)),
     };
 }
 
@@ -81,11 +85,14 @@ async function loadDaysPrice(coinID: string, timestamp: number) {
 }
 
 async function getSymbols(): Promise<Symbols>{
-    let json = getJSON(symbolsURI);
+    let req = getJSON(symbolsURI);
     let inverse: string[] = [];
     let usdtPerpetual: string[] = [];
 
-    (await json)['result'].forEach((symbol: any) => {
+    req.catch((error) => {
+    });
+
+    (await req)['result'].forEach((symbol: any) => {
         const quote = normalizeSymbol(symbol['quote_currency']);
         if (quote === 'usdt') {
             usdtPerpetual.push(symbol['name']);
@@ -105,8 +112,11 @@ async function loadVolume(symbols: string[], symbolType: string, from: number) {
             uri = usdtPerpetualsURI(symbol, from);
         }
 
+        const req = getJSON(uri);
+
+
         // Load the data
-        let body = (await getJSON(uri))['result'];
+        let body = (await req)['result'];
         if (!body || !body.length) {
             return await volume;
         }
@@ -118,7 +128,9 @@ async function loadVolume(symbols: string[], symbolType: string, from: number) {
             _volume = parseFloat(body['turnover']);
         }
 
-        console.log(`Loaded ${symbol}: ${_volume} - ${JSON.stringify(body)}`);
+        if (body['open_time'] < from || body['open_time'] > (from + 86400)) {
+            return await volume;
+        }
 
         // Accumulate the volume
         return (await volume) + _volume;
@@ -132,30 +144,39 @@ async function loadVolumeForTimestamp(timestamp: number, symbols: Symbols) {
 }
 
 export default async function getContributions() {
-    // const currentDateString = dayjs.utc().format('YYYYMMDD');
     const symbols = await getSymbols();
     const contributions: Array<Contribution> = [];
 
-    let ts = 0;
-    // let startDate = dayjs.utc(currentDateString, 'YYYYMMDD');
-    // let startDate = dayjs.utc('2021-12-17', 'YYYYMMDD');
-    let startDate = dayjs.utc('2021-08-16', 'YYYYMMDD');
-    let endDate = startDate.add(1, 'd');
+    const todayString = dayjs.utc().format('YYYYMMDD');
+    const todayDate = dayjs.utc("20220228", 'YYYYMMDD');
+    // const todayDate = dayjs.utc(todayString, 'YYYYMMDD');
 
-    for (let i = 0; i < 2; i++) {
-        endDate = startDate;
-        startDate = startDate.subtract(1, 'd');
-        ts = startDate.unix();
+    let startDate = todayDate.subtract(1, 'day').startOf('day');
 
+    const getContribution = async () => {
+        const ts = startDate.unix();
         const volume = await loadVolumeForTimestamp(ts, symbols);
         const btc = await loadDaysPrice('bitcoin', ts);
         const eth = await loadDaysPrice('ethereum', ts);
-        const contribution = loadContribution({btc, eth}, volume, ts);
-        console.log(ts);
-        console.log(startDate.format('YYYY-MM-DD'));
-        console.log(volume);
-        console.log(contribution);
-        contributions.push(contribution);
+        contributions.push(formatContribution({btc, eth}, volume, ts));
+    };
+
+    function sleep(seconds:number) {
+        return new Promise((resolve) => {
+            setTimeout(resolve, seconds*250);
+        });
+    }
+
+    for (let i = 0; i < 3; i++) {
+        for (let i = 0; i < 5; i++) {
+            try {
+                await getContribution();
+                break;
+            } catch (err) {
+                await sleep(  i*2);
+            }
+        }
+        startDate = startDate.subtract(1, 'd');
     }
     return contributions;
 }

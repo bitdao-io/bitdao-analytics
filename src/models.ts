@@ -12,13 +12,13 @@ export class Contribution {
     date: string;
     tradeVolume: number;
     contributeVolume: number;
-    // ethCount: number;
-    // ethPrice: number;
+    ethCount: number;
+    ethPrice: number;
     ethAmount: number;
     usdtAmount: number;
-    // usdtCount: number;
+    usdtCount: number;
     usdcAmount: number;
-    // usdcCount: number;
+    usdcCount: number;
 }
 
 export class Symbols {

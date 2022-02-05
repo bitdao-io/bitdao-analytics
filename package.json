@@ -4,29 +4,39 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "lambda-update-api-s3": "ts-node -e \"import handler from './src/lambdas/updateAPIS3'; import json from './scripts/update-api-lambda-cli-test-event.json';console.log(handler());\"",
+    "test": "jest --detectOpenHandles",
+    "lambda-update-api-s3": "ts-node -e \\\"import handler from './src/lambdas/updateAPIS3'; import json from 'tests/update-api-lambda-cli-test-event.json';console.log(handler());\\\"",
     "treasury": "node src/getters/getTreasuryBalances.mjs"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "alasql": "^1.7.3",
     "aws-sdk": "^2.1005.0",
     "bent": "^7.3.12",
-    "bignumber.js": "^9.0.2",
-    "coingecko-api": "^1.0.10",
     "dayjs": "^1.10.7",
     "dotenv": "^10.0.0",
+    "knex": "^1.0.4",
+    "pg": "^8.7.3",
+    "prettier-eslint": "^13.0.0",
     "request-promise": "^4.2.6",
-    "ts-node": "^10.4.0",
-    "typescript": "^4.5.3",
     "web3": "^1.6.0"
   },
   "devDependencies": {
     "@types/bent": "^7.3.2",
-    "sqlite": "^4.0.23",
-    "sqlite3": "^5.0.2"
+    "@types/jest": "^27.4.1",
+    "@types/mocha": "^9.1.0",
+    "@typescript-eslint/eslint-plugin": "^5.15.0",
+    "@typescript-eslint/parser": "^5.15.0",
+    "better-sqlite3": "^7.5.0",
+    "eslint": "^8.11.0",
+    "eslint-config-prettier": "^8.5.0",
+    "eslint-plugin-prettier": "^4.0.0",
+    "mocha": "^9.1.2",
+    "jest": "^27.5.1",
+    "prettier": "^2.5.1",
+    "ts-jest": "^27.1.3",
+    "ts-node": "^10.4.0",
+    "typescript": "^4.5.3"
   }
 }

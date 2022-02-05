@@ -148,7 +148,7 @@ export default async function getContributions() {
     const contributions: Array<Contribution> = [];
 
     const todayString = dayjs.utc().format('YYYYMMDD');
-    const todayDate = dayjs.utc("20220228", 'YYYYMMDD');
+    const todayDate = dayjs.utc("20220304", 'YYYYMMDD');
     // const todayDate = dayjs.utc(todayString, 'YYYYMMDD');
 
     let startDate = todayDate.subtract(1, 'day').startOf('day');
@@ -167,7 +167,7 @@ export default async function getContributions() {
         });
     }
 
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 1; i++) {
         for (let i = 0; i < 5; i++) {
             try {
                 await getContribution();

@@ -1,13 +1,9 @@
-import Web3
-    from "web3";
+import Web3 from 'web3'
 
-const {
-    tokens,
-    erc20MinABI
-} = require('../constants.ts');
+const {tokens, erc20MinABI} = require('../constants.ts')
 
-import {Token} from "../models";
-import {getPrices} from "./getPrices";
+import {Token} from '../models'
+import {getPrices} from './getPrices'
 
 /**
  * Get ETH balance of account.
@@ -16,8 +12,8 @@ import {getPrices} from "./getPrices";
  * @returns balance of ether
  */
 async function getEthBalance(web3: Web3, walletAddr: string): Promise<number> {
-    const etherBalance = await web3.eth.getBalance(walletAddr);
-    return parseFloat(web3.utils.fromWei(etherBalance, 'ether'));
+    const etherBalance = await web3.eth.getBalance(walletAddr)
+    return parseFloat(web3.utils.fromWei(etherBalance, 'ether'))
 }
 
 /**
@@ -27,11 +23,15 @@ async function getEthBalance(web3: Web3, walletAddr: string): Promise<number> {
  * @param tokenAddr erc20 token address to get balance of
  * @returns balance of erc20
  */
-async function getERC20Balance(web3: any, walletAddr: string, tokenAddr: string): Promise<number> {
-    const contract = new web3.eth.Contract(erc20MinABI, tokenAddr);
-    const decimals = await contract.methods.decimals().call();
-    const balance = await contract.methods.balanceOf(walletAddr).call();
-    return (balance / (Math.pow(10, decimals)));
+async function getERC20Balance(
+    web3: any,
+    walletAddr: string,
+    tokenAddr: string
+): Promise<number> {
+    const contract = new web3.eth.Contract(erc20MinABI, tokenAddr)
+    const decimals = await contract.methods.decimals().call()
+    const balance = await contract.methods.balanceOf(walletAddr).call()
+    return balance / Math.pow(10, decimals)
 }
 
 /**
@@ -41,23 +41,28 @@ async function getERC20Balance(web3: any, walletAddr: string, tokenAddr: string)
  * @returns balances of ether and tokens
  */
 async function getNativeBalances(web3: Web3, walletAddr: string) {
-    let balances: any = {};
+    let balances: any = {}
 
-    await Promise.all(tokens.map(async (token: Token) => {
-        let getter = getEthBalance;
-        if (token.address) {
-            getter = (web3: Web3, walletAddr: string) => getERC20Balance(web3, walletAddr, token.address);
-        }
+    await Promise.all(
+        tokens.map(async (token: Token) => {
+            let getter = getEthBalance
+            if (token.address) {
+                getter = (web3: Web3, walletAddr: string) =>
+                    getERC20Balance(web3, walletAddr, token.address)
+            }
 
-        return getter(web3, walletAddr).then((balance: number) => {
-            balances[token.symbol] = balance;
-        }).catch((err) => {
-            console.log('get balance error:', err);
-            return 0;
-        });
-    }));
+            return getter(web3, walletAddr)
+                .then((balance: number) => {
+                    balances[token.symbol] = balance
+                })
+                .catch((err) => {
+                    console.log('get balance error:', err)
+                    return 0
+                })
+        })
+    )
 
-    return balances;
+    return balances
 }
 
 /**
@@ -67,19 +72,19 @@ async function getNativeBalances(web3: Web3, walletAddr: string) {
  * @returns balances in USD
  */
 export default async function getBalances(web3: Web3, walletAddr: string) {
-    let balances = await getNativeBalances(web3, walletAddr);
-    let prices = await getPrices();
+    let balances = await getNativeBalances(web3, walletAddr)
+    let prices = await getPrices()
 
-    let usdTotal = 0;
+    let usdTotal = 0
     let response = tokens.reduce((resp: any, token: Token) => {
-        let symbol = token.symbol.toLocaleLowerCase();
-        resp[symbol + "Count"] = balances[token.symbol];
-        resp[symbol + "Price"] = prices[token.symbol];
-        usdTotal += balances[token.symbol] * prices[token.symbol];
-        return resp;
-    }, {});
+        let symbol = token.symbol.toLocaleLowerCase()
+        resp[symbol + 'Count'] = balances[token.symbol]
+        resp[symbol + 'Price'] = prices[token.symbol]
+        usdTotal += balances[token.symbol] * prices[token.symbol]
+        return resp
+    }, {})
 
-    response.usdTotal = usdTotal;
+    response.usdTotal = usdTotal
 
-    return response;
+    return response
 }

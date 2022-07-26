@@ -1,9 +1,7 @@
 import Web3 from 'web3'
-
-const {tokens, erc20MinABI} = require('../constants.ts')
-
-import {Token} from '../models'
-import {getPrices} from './getPrices'
+import {tokens, erc20MinABI} from '../constants'
+import {GetAllPrices} from './getPrices'
+import {Balances, Token} from '../models'
 
 /**
  * Get ETH balance of account.
@@ -71,9 +69,12 @@ async function getNativeBalances(web3: Web3, walletAddr: string) {
  * @param walletAddr wallet address to get balance of
  * @returns balances in USD
  */
-export default async function getBalances(web3: Web3, walletAddr: string) {
+export default async function getBalances(
+    web3: Web3,
+    walletAddr: string
+): Promise<Balances> {
     let balances = await getNativeBalances(web3, walletAddr)
-    let prices = await getPrices()
+    let prices = await GetAllPrices()
 
     let usdTotal = 0
     let response = tokens.reduce((resp: any, token: Token) => {
@@ -82,8 +83,9 @@ export default async function getBalances(web3: Web3, walletAddr: string) {
         resp[symbol + 'Price'] = prices[token.symbol]
         usdTotal += balances[token.symbol] * prices[token.symbol]
         return resp
-    }, {})
+    }, new Balances())
 
+    response.timestamp = new Date().getTime()
     response.usdTotal = usdTotal
 
     return response

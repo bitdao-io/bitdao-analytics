@@ -1,11 +1,15 @@
+import {
+    GetJSON
+} from "./getJSON";
+
 const {tokens} = require('../constants.ts')
 const rp = require('request-promise')
 import {Token} from '../models'
 
-function coingeckoOptions(path: string, otherQs: any) {
+function buildURI(path: string, otherQs: any) {
     let opts: any = {
         method: 'GET',
-        uri: 'https://api.coingecko.com/api/v3/simple/' + path,
+        uri: `https://api.coingecko.com/api/v3/simple/${path}`,
         qs: {
             vs_currencies: 'USD'
         },
@@ -20,43 +24,55 @@ function coingeckoOptions(path: string, otherQs: any) {
     return opts
 }
 
-async function getEthPrice() {
-    return rp(coingeckoOptions('price', {ids: 'ethereum'})).then(
-        (resp: any) => {
-            return resp.ethereum.usd.toFixed(2)
-        }
-    )
+const buildHistoricURI = (coinID: string, time: number): string => {
+    const end = time + 86400
+    return `https://api.coingecko.com/api/v3/coins/${coinID}/market_chart/range?vs_currency=usd&from=${time}&to=${end}`
 }
 
-async function getTokenPrice(addr: string) {
-    const opts = coingeckoOptions('token_price/ethereum', {
-        contract_addresses: addr
-    })
-    return rp(opts).then((resp: any) => {
-        const tokenJson = resp[addr.toLocaleLowerCase()]
-        return tokenJson.usd.toFixed(2)
-    })
+async function getCoinPrice(coin: string): Promise<number> {
+    const resp = await rp(buildURI('price', {ids: coin}))
+    return resp[coin].usd.toFixed(2)
 }
 
-export async function getPrices() {
-    const handleError = (err: any) => {
-        console.log('Coingecko call error:', err.message)
-        return 0
-    }
+export async function GetETHPrice(): Promise<number> {
+    return getCoinPrice('ethereum')
+}
 
-    let prices: any = {ETH: await getEthPrice().catch(handleError)}
+export async function GetBTCPrice(): Promise<number> {
+    return getCoinPrice('bitcoin')
+}
 
-    await Promise.all(
-        tokens.map(async (token: Token) => {
-            if (token.address) {
-                prices[token.symbol] = await getTokenPrice(token.address).catch(
-                    handleError
-                )
-            }
+export async function GetTokenPrice(addr: string): Promise<number> {
+    const resp = await rp(
+        buildURI('token_price/ethereum', {
+            contract_addresses: addr
         })
     )
+    return resp[addr.toLocaleLowerCase()].usd.toFixed(2)
+}
+
+export async function GetHistoricETHPrice(time : number): Promise<number> {
+    let json = await GetJSON(buildHistoricURI('ethereum', time))
+    return json['prices'].map((price: any) => price[1])[0]
+}
+
+
+export async function GetAllPrices() {
+    let prices: Record<string, number> = {}
+
+    // Start loading prices
+    const getBTC = GetBTCPrice()
+    const getETH = GetETHPrice()
+    const getTokens = tokens.map(async (token: Token) => {
+        if (token.address) {
+            prices[token.symbol] = await GetTokenPrice(token.address)
+        }
+    })
+
+    // Wait for all prices to resolve
+    await Promise.all(getTokens)
+    prices.BTC = await getBTC
+    prices.ETH = await getETH
 
     return prices
 }
-
-export default {getPrices}

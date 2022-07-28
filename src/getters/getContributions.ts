@@ -1,17 +1,15 @@
-import {Prices, Symbols, Contribution} from '../models'
+import {ByBitContribution} from '../models'
 
-import bent from 'bent'
+import {GetJSON} from './getJSON'
+import {GetSymbols, Symbols} from './getSymbols'
+
 import dayjs from 'dayjs'
 import utc from 'dayjs/plugin/utc'
+import {
+    GetHistoricETHPrice
+} from "./getPrices";
 
 dayjs.extend(utc)
-const newGetJSONRequest = bent('json')
-
-const getJSON = (uri: string) => {
-    let req = newGetJSONRequest(uri)
-    req.catch(() => {})
-    return req
-}
 
 // ContributionBPS is the bps of trade volume we expect to be contributed.
 const ContributionBPS = 0.00025
@@ -24,15 +22,6 @@ const ContributionsShares = {
     usdc: 0.25
 }
 
-// ContributionStartTime is the timestamp that the contribution pledge started.
-// const ContributionStartTime = 1626307200000;
-
-// ContributionChartLength is the maximum length of the contribution chart
-// stored in S3.
-const ContributionChartLength = 15
-
-const symbolsURI = 'https://api.bybit.com/v2/public/symbols'
-
 const inverseURI = (symbol: string, from: number): string => {
     return `https://api.bybit.com/v2/public/kline/list?interval=D&limit=1&symbol=${symbol}&from=${from}`
 }
@@ -42,25 +31,26 @@ const usdtPerpetualsURI = (symbol: string, from: number): string => {
 }
 
 function formatContribution(
-    prices: Prices,
+    ethPrice: number,
     tradeVolumeInUSD: number,
     timestamp: number
-): Contribution {
+): ByBitContribution {
     // const contributionVolumeInUSD = prices.btc * tradeVolumeInUSD * ContributionBPS;
     const contributionVolumeInUSD = tradeVolumeInUSD * ContributionBPS
 
     const ethAmount = contributionVolumeInUSD * ContributionsShares.eth
-    const ethCount = ethAmount / prices.eth
+    const ethCount = ethAmount / ethPrice
 
     const usdtAmount = contributionVolumeInUSD * ContributionsShares.usdt
     const usdcAmount = contributionVolumeInUSD * ContributionsShares.usdc
 
     return {
         date: dayjs.utc(timestamp * 1000).format('YYYY-MM-DD'),
-        ethPrice: parseFloat(prices.eth.toFixed(2)),
+        timestamp: timestamp * 1000,
+        ethPrice: parseFloat(ethPrice.toFixed(2)),
 
         tradeVolume: parseFloat(tradeVolumeInUSD.toFixed(0)),
-        contributeVolume: parseFloat(contributionVolumeInUSD.toFixed(0)),
+        contributionVolume: parseFloat(contributionVolumeInUSD.toFixed(0)),
 
         ethAmount: parseFloat(ethAmount.toFixed(2)),
         ethCount: parseFloat(ethCount.toFixed(2)),
@@ -71,53 +61,20 @@ function formatContribution(
     }
 }
 
-function normalizeSymbol(symbol: string) {
-    return symbol.toLocaleLowerCase()
-}
-
-async function getPrices(coinID: string, from: number, to: number) {
-    let json = await getJSON(
-        `https://api.coingecko.com/api/v3/coins/${coinID}/market_chart/range?vs_currency=usd&from=${from}&to=${to}`
-    )
-    return json['prices'].map((price: any) => price[1])
-}
-
-async function loadDaysPrice(coinID: string, timestamp: number) {
-    return (await getPrices(coinID, timestamp, timestamp + 86400))[0]
-}
-
-async function getSymbols(): Promise<Symbols> {
-    let req = getJSON(symbolsURI)
-    let inverse: string[] = []
-    let usdtPerpetual: string[] = []
-
-    req.catch((error) => {})
-
-    ;(await req)['result'].forEach((symbol: any) => {
-        const quote = normalizeSymbol(symbol['quote_currency'])
-        if (quote === 'usdt') {
-            usdtPerpetual.push(symbol['name'])
-        } else {
-            inverse.push(symbol['name'])
-        }
-    })
-
-    return {
-        inverse,
-        usdtPerpetual
-    }
-}
-
-async function loadVolume(symbols: string[], symbolType: string, from: number) {
+async function loadVolumeAtDateForType(
+    symbols: string[],
+    type: string,
+    from: number
+) {
     return symbols.reduce<Promise<number>>(
         async (volume: Promise<number>, symbol: string) => {
             // Get endpoint for this symbol type
             let uri = inverseURI(symbol, from)
-            if (symbolType === 'perp') {
+            if (type === 'perp') {
                 uri = usdtPerpetualsURI(symbol, from)
             }
 
-            const req = getJSON(uri)
+            const req = GetJSON(uri)
 
             // Load the data
             let body = (await req)['result']
@@ -128,7 +85,7 @@ async function loadVolume(symbols: string[], symbolType: string, from: number) {
             // Grab the volume based on the symbol type
             body = body[0]
             let _volume = parseFloat(body['volume'])
-            if (symbolType === 'perp') {
+            if (type === 'perp') {
                 _volume = parseFloat(body['turnover'])
             }
 
@@ -143,42 +100,38 @@ async function loadVolume(symbols: string[], symbolType: string, from: number) {
     )
 }
 
-async function loadVolumeForTimestamp(timestamp: number, symbols: Symbols) {
-    let inverseVolume = await loadVolume(symbols.inverse, 'inverse', timestamp)
-    let perpVolume = await loadVolume(symbols.usdtPerpetual, 'perp', timestamp)
+async function loadTotalVolumeAtDate(timestamp: number, symbols: Symbols) {
+    let inverseVolume = await loadVolumeAtDateForType(
+        symbols.inverse,
+        'inverse',
+        timestamp
+    )
+    let perpVolume = await loadVolumeAtDateForType(
+        symbols.usdtPerpetual,
+        'perp',
+        timestamp
+    )
     return inverseVolume + perpVolume
 }
 
 export default async function getContributions() {
-    const symbols = await getSymbols()
-    const contributions: Array<Contribution> = []
+    const symbols = await GetSymbols()
+    const contributions: Array<ByBitContribution> = []
 
-    const todayString = dayjs.utc().format('YYYYMMDD')
     const todayDate = dayjs.utc('20220726', 'YYYYMMDD')
-    // const todayDate = dayjs.utc(todayString, 'YYYYMMDD');
-
     let startDate = todayDate.subtract(1, 'day').startOf('day')
 
     const getContribution = async () => {
         const ts = startDate.unix()
-        let volume, btc, eth
+        let volume, eth
         try {
-            volume = await loadVolumeForTimestamp(ts, symbols)
-            btc = await loadDaysPrice('bitcoin', ts)
-            eth = await loadDaysPrice('ethereum', ts)
+            volume = await loadTotalVolumeAtDate(ts, symbols)
+            eth = await GetHistoricETHPrice(ts)
         } catch (err) {
             return false
         }
-        contributions.push(
-            formatContribution(
-                {
-                    btc,
-                    eth
-                },
-                volume,
-                ts
-            )
-        )
+
+        contributions.push(formatContribution(eth, volume, ts))
         return true
     }
 

@@ -1,18 +1,12 @@
-import aws
-    from 'aws-sdk';
-import Web3
-    from 'web3';
-import {Config} from "./config";
+import {Client} from './stores/ddb'
+import Web3 from 'web3'
+import {Config} from './config'
+import {S3Client} from '@aws-sdk/client-s3'
 
 export default function newConnections(config: Config) {
-    const s3 = new aws.S3();
-    s3.config.update({
-        accessKeyId: config.s3.accessKeyID,
-        secretAccessKey: config.s3.secretAccessKey
-    });
-
     return {
-        s3: s3,
-        web3: new Web3(new Web3.providers.HttpProvider(config.web3RPCHost)),
-    };
-};
+        s3: new S3Client({region: config.s3.region}),
+        ddb: new Client(config.dynamodb.tableName, config.dynamodb.endpoint),
+        web3: new Web3(new Web3.providers.HttpProvider(config.web3RPCHost))
+    }
+}

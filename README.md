@@ -4,11 +4,11 @@ Backend for BitDAO analytics.
 
 ## Build the updater
 ```bash
-make
+yarn install
+yarn build
 ```
 
 ## Test locally
 ```
-yarn install
 yarn lambda-update-api-s3
 ```

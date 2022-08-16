@@ -1,10 +1,14 @@
 # bitdao-analytics
-Library for BitDAO analytics systems
 
-## Run the project
+Backend for BitDAO analytics.
 
+## Build the updater
 ```bash
-npm install
+make
+```
 
-npm run data
+## Test locally
+```
+yarn install
+yarn lambda-update-api-s3
 ```

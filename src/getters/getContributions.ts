@@ -1,15 +1,19 @@
 import {Prices, Symbols, Contribution} from '../models'
 
+import newConfigFromEnv from '../config'
+
 import bent from 'bent'
 import dayjs from 'dayjs'
 import utc from 'dayjs/plugin/utc'
+
+const config = newConfigFromEnv()
 
 dayjs.extend(utc)
 const newGetJSONRequest = bent('json')
 
 // any call to getJSON should take ATLEAST 1 second to respond
 const getJSON = (uri: string) => new Promise((resolve, reject) => {
-    // wait for 1 second before making the request so that we never hit the rate-limit
+    // control the rate of api reqs by setting a timeout around the req (these this out for now)
     setTimeout(() => {
         try {
             // make and resolve the request
@@ -17,7 +21,7 @@ const getJSON = (uri: string) => new Promise((resolve, reject) => {
         } catch(e) {
             reject(e)
         }
-    }, 1000)
+    })
 })
 
 // ContributionBPS is the bps of trade volume we expect to be contributed.
@@ -42,13 +46,11 @@ const ContributionsShares = {
  * ContributionChartLength is the maximum length of the contribution chart
  * stored in S3.
  */
-const ContributionChartLength = 15
+const symbolsURI = `https://api.bybit.com/v2/public/symbols?api_key=${config.bybitApiKey}`
 
-const symbolsURI = 'https://api.bybit.com/v2/public/symbols'
+const inverseURI = (symbol: string, from: number): string => `https://api.bybit.com/v2/public/kline/list?interval=D&limit=1&symbol=${symbol}&from=${from}&api_key=${config.bybitApiKey}`
 
-const inverseURI = (symbol: string, from: number): string => `https://api.bybit.com/v2/public/kline/list?interval=D&limit=1&symbol=${symbol}&from=${from}`
-
-const usdtPerpetualsURI = (symbol: string, from: number): string => `https://api.bybit.com/public/linear/kline?interval=D&limit=1&symbol=${symbol}&from=${from}`
+const usdtPerpetualsURI = (symbol: string, from: number): string => `https://api.bybit.com/public/linear/kline?interval=D&limit=1&symbol=${symbol}&from=${from}&api_key=${config.bybitApiKey}`
 
 function formatContribution(
     prices: Prices,
@@ -102,7 +104,7 @@ async function getSymbols(): Promise<Symbols> {
 
     req.catch((error) => {})
 
-    ;(await req).result.forEach((symbol: any) => {
+    ;(await req).result.forEach((symbol: any) => {        
         const quote = normalizeSymbol(symbol.quote_currency)
         if (quote === 'usdt') {
             usdtPerpetual.push(symbol.name)
@@ -118,38 +120,38 @@ async function getSymbols(): Promise<Symbols> {
 }
 
 async function loadVolume(symbols: string[], symbolType: string, from: number) {
-    return symbols.reduce<Promise<number>>(
-        async (volume: Promise<number>, symbol: string) => {
-            // Get endpoint for this symbol type
-            let uri = inverseURI(symbol, from)
-            if (symbolType === 'perp') {
-                uri = usdtPerpetualsURI(symbol, from)
-            }
+    let volume = 0;
+    for(const symbol of symbols) {
+        // Get endpoint for this symbol type
+        let uri = inverseURI(symbol, from)
+        if (symbolType === 'perp') {
+            uri = usdtPerpetualsURI(symbol, from)
+        }
 
-            const req = getJSON(uri)
+        const req = getJSON(uri)
 
-            // Load the data
-            let body = (await req).result
-            if (!body || !body.length) {
-                return await volume
-            }
+        // Load the data
+        let body = (await req).result
+        if (!body || !body.length) {
+            return volume
+        }
 
-            // Grab the volume based on the symbol type
-            body = body[0]
-            let _volume = parseFloat(body.volume)
-            if (symbolType === 'perp') {
-                _volume = parseFloat(body.turnover)
-            }
+        // Grab the volume based on the symbol type
+        body = body[0]
+        let _volume = parseFloat(body.volume)
+        if (symbolType === 'perp') {
+            _volume = parseFloat(body.turnover)
+        }
 
-            if (body.open_time < from || body.open_time > from + 86400) {
-                return await volume
-            }
+        if (body.open_time < from || body.open_time > from + 86400) {
+            return volume
+        }
 
-            // Accumulate the volume
-            return (await volume) + _volume
-        },
-        Promise.resolve(0)
-    )
+        // Accumulate the volume
+        volume = volume + _volume
+    }
+
+    return volume
 }
 
 async function loadVolumeForTimestamp(timestamp: number, symbols: Symbols) {
@@ -158,51 +160,69 @@ async function loadVolumeForTimestamp(timestamp: number, symbols: Symbols) {
     return inverseVolume + perpVolume
 }
 
-export default async function getContributions() {
-    const contributions: Array<Contribution> = []
-    // get start of today in YYYYMMDD format
-    const todayDate = dayjs.utc(dayjs.utc().format('YYYYMMDD'), 'YYYYMMDD')
+ 
+// get contributions for each day in the set
+async function getContributionsOnDay(symbols: Symbols, startDate: dayjs.Dayjs) {
+    // all results will be stored in this array
+    const contributions: Contribution[] = []
+    
+    // given date to unix ts
+    const ts = startDate.unix()
 
-    // get contributions for each day in the set
-    const getContribution = async (symbols, startDate) => {
-        // given date to unix ts
-        const ts = startDate.unix()
+    const volume = await loadVolumeForTimestamp(ts, symbols)
+    const btc = await loadDaysPrice('bitcoin', ts)
+    const eth = await loadDaysPrice('ethereum', ts)
 
-        const volume = await loadVolumeForTimestamp(ts, symbols)
-        const btc = await loadDaysPrice('bitcoin', ts)
-        const eth = await loadDaysPrice('ethereum', ts)
-
-        contributions.push(
-            formatContribution(
-                {
-                    btc,
-                    eth
-                },
-                volume,
-                ts
-            )
+    contributions.push(
+        formatContribution(
+            {
+                btc,
+                eth
+            },
+            volume,
+            ts
         )
-        return true
-    }
+    )
+    
+    return contributions
+}
 
-    // ensures we definitily collect a result here
-    const retryForContributions = async (symbols, startDate) => {
-        let keepTrying;
-        do {
-            try {
-                await getContribution(symbols, startDate)
-                // got result break
-                keepTrying = false;
-            } catch {
-                // no result yet - keep trying
-                keepTrying = true;
-            }
-        } while (keepTrying)
-    }
-
-    const symbols = await getSymbols()
-
-    await retryForContributions(symbols,  todayDate.startOf('day').subtract(1, 'd'))
+// ensures we definitely collect a result here
+async function retryForContributionsOnDay(symbols: Symbols, startDate: dayjs.Dayjs) {
+    let keepTrying = false;
+    let contributions: Contribution[] = [];
+    do {
+        try {
+            // attempt to get the results for the given day
+            contributions = await getContributionsOnDay(symbols, startDate)
+            // got result break
+            keepTrying = false;
+        } catch {
+            // no result yet - keep trying
+            keepTrying = true;
+        }
+    } while (keepTrying)
 
     return contributions
+}
+
+// get only the contributions for today...
+export default async function getContributionsToday() {
+    // get start of today in utc
+    const todayDate = dayjs.utc().format("YYYY/MM/DD")
+
+    // get contributions for today
+    return getContributions(todayDate)
+}
+
+// get only the contributions for today...
+export async function getContributions(date: string) {
+    // get all symbols
+    const symbols = await getSymbols()
+    
+    // get start of today in utc
+    const todayDate = dayjs.utc(date, "YYYY/MM/DD").startOf('day')
+
+    // get contributions for the given date
+    return retryForContributionsOnDay(symbols,  todayDate)
 }

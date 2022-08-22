@@ -10,13 +10,17 @@ export class Config{
     displayPrecision: number;
     treasuryAddress: string;
     web3RPCHost: string;
+    bybitApiKey: string;
     s3: S3Config;
 }
 
 export default function newConfigFromEnv() {
-    let config = new Config();
+    const config = new Config();
 
     config.displayPrecision = parseInt(process.env.BITDAO_DISPLAY_PRECISCION, 10) || 3;
+
+    config.bybitApiKey = process.env.BYBIT_API_KEY;
+
     config.treasuryAddress = process.env.BITDAO_ACCOUNT;
     config.web3RPCHost = process.env.MAIN_RPC_URL;
 

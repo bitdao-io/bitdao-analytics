@@ -89,8 +89,9 @@ function normalizeSymbol(symbol: string) {
 async function getPrices(coinID: string, from: number, to: number) {
     const json = await getJSON(
         `https://api.coingecko.com/api/v3/coins/${coinID}/market_chart/range?vs_currency=usd&from=${from}&to=${to}`
-    )
-    return json.prices.map((price: any) => price[1])
+    ) as { prices: number[][] }
+    
+    return json.prices.map((price: number[]) => price[1] || 0)
 }
 
 async function loadDaysPrice(coinID: string, timestamp: number) {
@@ -98,13 +99,13 @@ async function loadDaysPrice(coinID: string, timestamp: number) {
 }
 
 async function getSymbols(): Promise<Symbols> {
-    const req = getJSON(symbolsURI)
+    const req = getJSON(symbolsURI) as Promise<{ result: {quote_currency: string, name: string}[]}>
     const inverse: string[] = []
     const usdtPerpetual: string[] = []
 
-    req.catch((error) => {})
+    req.catch(() => ({}))
 
-    ;(await req).result.forEach((symbol: any) => {        
+    ;(await req).result.forEach((symbol) => {        
         const quote = normalizeSymbol(symbol.quote_currency)
         if (quote === 'usdt') {
             usdtPerpetual.push(symbol.name)
@@ -128,22 +129,22 @@ async function loadVolume(symbols: string[], symbolType: string, from: number) {
             uri = usdtPerpetualsURI(symbol, from)
         }
 
-        const req = getJSON(uri)
+        const req = getJSON(uri) as Promise<{ result: {volume: string, turnover: string, open_time: number}[]}>
 
         // Load the data
-        let body = (await req).result
+        const body = (await req).result
         if (!body || !body.length) {
             return volume
         }
 
         // Grab the volume based on the symbol type
-        body = body[0]
-        let _volume = parseFloat(body.volume)
+        const innerBody = body[0]
+        let _volume = parseFloat(innerBody.volume)
         if (symbolType === 'perp') {
-            _volume = parseFloat(body.turnover)
+            _volume = parseFloat(innerBody.turnover)
         }
 
-        if (body.open_time < from || body.open_time > from + 86400) {
+        if (innerBody.open_time < from || innerBody.open_time > from + 86400) {
             return volume
         }
 
@@ -160,8 +161,29 @@ async function loadVolumeForTimestamp(timestamp: number, symbols: Symbols) {
     return inverseVolume + perpVolume
 }
 
- 
-// get contributions for each day in the set
+// ensures we definitely collect a result here
+async function _retryIfError(
+    method: (_symbols: Symbols, _startDate: dayjs.Dayjs) => Promise<Contribution[]>, 
+    params: {symbols: Symbols, startDate: dayjs.Dayjs}
+) {
+    let keepTrying = false;
+    let contributions: Contribution[] = [];
+    do {
+        try {
+            // attempt to get the results for the given day
+            contributions = await method(params.symbols, params.startDate)
+            // got result break
+            keepTrying = false;
+        } catch {
+            // no result yet - keep trying
+            keepTrying = true;
+        }
+    } while (keepTrying)
+
+    return contributions
+}
+
+// get contributions for the given day and return load volumes
 async function _getContributionsOnDate(symbols: Symbols, startDate: dayjs.Dayjs) {
     // all results will be stored in this array
     const contributions: Contribution[] = []
@@ -187,25 +209,6 @@ async function _getContributionsOnDate(symbols: Symbols, startDate: dayjs.Dayjs)
     return contributions
 }
 
-// ensures we definitely collect a result here
-async function _retryForContributionsOnDate(symbols: Symbols, startDate: dayjs.Dayjs) {
-    let keepTrying = false;
-    let contributions: Contribution[] = [];
-    do {
-        try {
-            // attempt to get the results for the given day
-            contributions = await _getContributionsOnDate(symbols, startDate)
-            // got result break
-            keepTrying = false;
-        } catch {
-            // no result yet - keep trying
-            keepTrying = true;
-        }
-    } while (keepTrying)
-
-    return contributions
-}
-
 // get only the contributions for today (YYY/MM/DD format)...
 export async function getContributions(date: string) {
     // get all symbols
@@ -215,7 +218,7 @@ export async function getContributions(date: string) {
     const givenDate = dayjs.utc(date, "YYYY/MM/DD").startOf('day')
 
     // get contributions for the given date
-    return _retryForContributionsOnDate(symbols,  givenDate)
+    return _retryIfError(_getContributionsOnDate, { symbols,  startDate: givenDate})
 }
 
 // get only the contributions for today...

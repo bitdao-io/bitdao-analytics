@@ -11,9 +11,9 @@ const config = newConfigFromEnv()
 dayjs.extend(utc)
 const newGetJSONRequest = bent('json')
 
-// any call to getJSON should take ATLEAST 1 second to respond
+// any call to getJSON should take * ATLEAST 1 second to respond (according to the rules of the api)
 const getJSON = (uri: string) => new Promise((resolve, reject) => {
-    // control the rate of api reqs by setting a timeout around the req (these this out for now)
+    // control the rate of api reqs by setting a timeout around the req (* leave this out for now - if we start getting throttled...)
     setTimeout(() => {
         try {
             // make and resolve the request
@@ -21,7 +21,7 @@ const getJSON = (uri: string) => new Promise((resolve, reject) => {
         } catch(e) {
             reject(e)
         }
-    })
+    }) // (...add 1000ms back in here)
 })
 
 // ContributionBPS is the bps of trade volume we expect to be contributed.
@@ -162,7 +162,7 @@ async function loadVolumeForTimestamp(timestamp: number, symbols: Symbols) {
 
  
 // get contributions for each day in the set
-async function getContributionsOnDay(symbols: Symbols, startDate: dayjs.Dayjs) {
+async function _getContributionsOnDate(symbols: Symbols, startDate: dayjs.Dayjs) {
     // all results will be stored in this array
     const contributions: Contribution[] = []
     
@@ -188,13 +188,13 @@ async function getContributionsOnDay(symbols: Symbols, startDate: dayjs.Dayjs) {
 }
 
 // ensures we definitely collect a result here
-async function retryForContributionsOnDay(symbols: Symbols, startDate: dayjs.Dayjs) {
+async function _retryForContributionsOnDate(symbols: Symbols, startDate: dayjs.Dayjs) {
     let keepTrying = false;
     let contributions: Contribution[] = [];
     do {
         try {
             // attempt to get the results for the given day
-            contributions = await getContributionsOnDay(symbols, startDate)
+            contributions = await _getContributionsOnDate(symbols, startDate)
             // got result break
             keepTrying = false;
         } catch {
@@ -206,6 +206,18 @@ async function retryForContributionsOnDay(symbols: Symbols, startDate: dayjs.Day
     return contributions
 }
 
+// get only the contributions for today (YYY/MM/DD format)...
+export async function getContributions(date: string) {
+    // get all symbols
+    const symbols = await getSymbols()
+    
+    // get start of today in utc
+    const givenDate = dayjs.utc(date, "YYYY/MM/DD").startOf('day')
+
+    // get contributions for the given date
+    return _retryForContributionsOnDate(symbols,  givenDate)
+}
+
 // get only the contributions for today...
 export default async function getContributionsToday() {
     // get start of today in utc
@@ -213,16 +225,4 @@ export default async function getContributionsToday() {
 
     // get contributions for today
     return getContributions(todayDate)
-}
-
-// get only the contributions for today...
-export async function getContributions(date: string) {
-    // get all symbols
-    const symbols = await getSymbols()
-    
-    // get start of today in utc
-    const todayDate = dayjs.utc(date, "YYYY/MM/DD").startOf('day')
-
-    // get contributions for the given date
-    return retryForContributionsOnDay(symbols,  todayDate)
 }

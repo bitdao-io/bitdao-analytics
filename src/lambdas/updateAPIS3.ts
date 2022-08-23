@@ -4,41 +4,38 @@ import {uploadFile} from '../s3'
 import getBalances from '../getters/getBalances'
 import getContributions from '../getters/getContributions'
 
+import dayjs from 'dayjs'
+import utc from 'dayjs/plugin/utc'
+
+dayjs.extend(utc)
+
 const config = newConfigFromEnv()
 const {
     s3,
     web3
 } = newConnections(config)
 
-function formatDateForName(date: Date) {
-    const pad = (n: number) => (n < 10 ? '0' : '') + n
-    const y = date.getUTCFullYear()
-    const m = pad(date.getUTCMonth() + 1)
-    const d = pad(date.getUTCDate())
-    return y + '-' + m + '-' + d
-}
 
-
-function writeToS3(name: string, body: any): Promise<[string, string]> {
+function writeToS3(name: string, body: unknown, date: string): Promise<[string, string]> {
     const json = JSON.stringify({
         success: true,
         body: body
     })
     return Promise.all([
       uploadFile(s3, config.s3.bucket, 'analytics/' + name + '.json', json),
-      uploadFile(s3, config.s3.bucket, 'analytics/' + name + '-' + formatDateForName(new Date()) + '.json', json)
+      uploadFile(s3, config.s3.bucket, 'analytics/' + name + '-' + date + '.json', json)
     ])
 }
 
-function print(func: Function): Promise<string> {
-    return func().then((resp: any) => {
-        console.log('---')
-        console.log(JSON.stringify(resp))
-        return true
-    })
-}
-
 export default async function handler() {
-    await writeToS3('balance', await getBalances(web3, config.treasuryAddress)),
-    await writeToS3('chart-100', await getContributions())
+    // get start of today in utc
+    const today = dayjs.utc()
+    const yesterday = today.subtract(1, "day")
+
+    // update balances
+    await writeToS3('balance', await getBalances(web3, config.treasuryAddress), today.format("YYYY-MM-DD"))
+    // write to yesterday to ensure we caught all data there
+    await writeToS3('chart-100', await getContributions(yesterday.format("YYYY/MM/DD")), yesterday.format("YYYY-MM-DD"))
+    // write to today to update chart
+    await writeToS3('chart-100', await getContributions(today.format("YYYY/MM/DD")), today.format("YYYY-MM-DD"))
 }

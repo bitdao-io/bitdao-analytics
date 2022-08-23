@@ -209,8 +209,8 @@ async function _getContributionsOnDate(symbols: Symbols, startDate: dayjs.Dayjs)
     return contributions
 }
 
-// get only the contributions for today (YYY/MM/DD format)...
-export async function getContributions(date: string) {
+// get only the contributions for given date (YYY/MM/DD format)...
+export default async function getContributions(date: string) {
     // get all symbols
     const symbols = await getSymbols()
     
@@ -219,13 +219,4 @@ export async function getContributions(date: string) {
 
     // get contributions for the given date
     return _retryIfError(_getContributionsOnDate, { symbols,  startDate: givenDate})
-}
-
-// get only the contributions for today...
-export default async function getContributionsToday() {
-    // get start of today in utc
-    const todayDate = dayjs.utc().format("YYYY/MM/DD")
-
-    // get contributions for today
-    return getContributions(todayDate)
 }

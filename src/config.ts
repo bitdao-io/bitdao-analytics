@@ -26,8 +26,8 @@ export default function newConfigFromEnv() {
 
     config.s3 = new S3Config();
     config.s3.bucket = process.env.AWS_BUCKET_NAME || 'api.bitdao.io';
-    config.s3.accessKeyID = process.env.AWS_ACCESS_KEY_ID;
-    config.s3.secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
+    // config.s3.accessKeyID = process.env.AWS_ACCESS_KEY_ID;
+    // config.s3.secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
 
     return config;
 }

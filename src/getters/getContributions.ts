@@ -14,14 +14,15 @@ const newGetJSONRequest = bent('json')
 // any call to getJSON should take * ATLEAST 1 second to respond (according to the rules of the api)
 const getJSON = (uri: string) => new Promise((resolve, reject) => {
     // control the rate of api reqs by setting a timeout around the req (* leave this out for now - if we start getting throttled...)
-    setTimeout(() => {
+   
+    // setTimeout(() => {
         try {
             // make and resolve the request
             resolve(newGetJSONRequest(uri))
         } catch(e) {
             reject(e)
         }
-    }) // (...add 1000ms back in here)
+    // }) // (...add 1000ms back in here)
 })
 
 // ContributionBPS is the bps of trade volume we expect to be contributed.

@@ -6,8 +6,8 @@
   "scripts": {
     "prebuild": "rm -rf dist",
     "dev": "tsc",
-    "build": "esbuild src/lambdas/updateAPIS3.ts --bundle --minify --sourcemap --platform=node --target=es2020 --outfile=dist/index.js --external:electron",
-    "postbuild": "cd dist && zip -r update-api-s3.zip index.js*",
+    "build": "esbuild --bundle src/lambdas/updateAPIS3.ts --platform=node --outbase=src/ --outfile=dist/index.js --external:electron",
+    "postbuild": "cd dist && zip -r update-api-s3.zip index.js",
     "test": "jest --detectOpenHandles",
     "lambda-update-api-s3": "ts-node -e \\\"import handler from './src/lambdas/updateAPIS3'; import json from 'tests/update-api-lambda-cli-test-event.json';console.log(handler());\\\"",
     "treasury": "node src/getters/getTreasuryBalances.mjs"

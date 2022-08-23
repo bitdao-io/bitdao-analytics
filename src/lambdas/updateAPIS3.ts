@@ -28,7 +28,7 @@ function writeToS3(name: string, body: unknown, date: string): Promise<[string, 
     ])
 }
 
-export default async function handler() {
+export async function handler() {
     // get start of today in utc
     const today = dayjs.utc()
     const yesterday = today.subtract(1, "day")
@@ -41,19 +41,29 @@ export default async function handler() {
         day = day.subtract(1, "day")
     }
 
+    console.log("Filling days array", days.length)
+
     // get the last known good state from the bucket
     const data = await getJSON(s3, config.s3.bucket, 'analytics/chart-100-day.json') as {body: { list: Contribution[] }}
 
+    console.log("Get data from s3 bucket", data)
+
     // push new day and update yesterday
     if (data.body.list[0] && data.body.list[0].date === yesterday.format("YYYY-MM-DD")) {
+        console.log("Update today and yesterday")
+
         // update yesterday
         data.body.list.splice(0, 1, (await getContributions(yesterday.format("YYYY/MM/DD")))[0]);
         // add today
         data.body.list.splice(0, 0, (await getContributions(today.format("YYYY/MM/DD")))[0]);
     } else if (data.body.list[0] && data.body.list[0].date === today.format("YYYY-MM-DD")) {
+        console.log("Update today only")
+
         // update today (yesterday already upto date)
         data.body.list.splice(0, 1, (await getContributions(today.format("YYYY/MM/DD")))[0]);
     }
+    
+    console.log("Drop older entries");
 
     // drop oldest result
     if (data.body.list.length > 100) {
@@ -62,12 +72,19 @@ export default async function handler() {
 
     // add missing entries
     let pointer = 0;
+
+    console.log("Add missing entries");
+
     for(const iday of days) {
         if (iday !== data.body?.list?.[pointer]?.date) {
             data.body.list.splice(pointer, 0, (await getContributions(iday.replace(/-/g, "/")))[0])
+            console.log("- entry missing", iday);
+
         }
         pointer++
     }
+
+    console.log("Write to s3");
 
     // update balances
     await writeToS3('balance', await getBalances(web3, config.treasuryAddress), today.format("YYYY-MM-DD"))

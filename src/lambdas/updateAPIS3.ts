@@ -51,13 +51,22 @@ export const handler = async function(event: Event, context: { logStreamName: st
     // push new day and update yesterday
     if (data.body.list[0] && data.body.list[0].date === yesterday.format("YYYY-MM-DD")) {
         console.log(" - last update was yesterday, update and push today")
+        
+        // record the old vol total
+        const oldVol = data.body.list[0].contributeVolume;
+
         // update yesterday
         data.body.list.splice(0, 1, (await getContributions(yesterday.format("YYYY/MM/DD")))[0]);
         // add today
         data.body.list.splice(0, 0, (await getContributions(today.format("YYYY/MM/DD")))[0]);
+
+        // save in the logs that yesterdays result has changed
+        if (oldVol !== data.body.list[1].contributeVolume) {
+            console.log(" -- yesterdays contributionVolume has changed", oldVol, " => ", data.body.list[1].contributeVolume)
+        }
     } else if (data.body.list[0] && data.body.list[0].date === today.format("YYYY-MM-DD")) {
-        console.log(" - last update was earlier today, update todays results")
-        // update today (yesterday already upto date)
+        console.log(" - last update was earlier today, update todays results only")
+        // update today (yesterday already up to date)
         data.body.list.splice(0, 1, (await getContributions(today.format("YYYY/MM/DD")))[0]);
     }
 

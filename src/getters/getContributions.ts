@@ -122,7 +122,7 @@ async function getSymbols(): Promise<Symbols> {
 }
 
 async function loadVolume(symbols: string[], symbolType: string, from: number) {
-    let volume = 0;
+    let volume = 0
     for(const symbol of symbols) {
         // Get endpoint for this symbol type
         let uri = inverseURI(symbol, from)
@@ -164,35 +164,35 @@ async function loadVolumeForTimestamp(timestamp: number, symbols: Symbols) {
 
 // ensures we definitely collect a result here
 async function _retryIfError(
-    method: (_symbols: Symbols, _startDate: dayjs.Dayjs) => Promise<Contribution[]>, 
-    params: {symbols: Symbols, startDate: dayjs.Dayjs}
+    method: (_params: {[key: string]: unknown}) => Promise<unknown>, 
+    params: {[key: string]: unknown}
 ) {
-    let keepTrying = false;
-    let contributions: Contribution[] = [];
+    let response: unknown
+    let keepTrying = false
     do {
         try {
             // attempt to get the results for the given day
-            contributions = await method(params.symbols, params.startDate)
+            response = await method(params)
             // got result break
-            keepTrying = false;
+            keepTrying = false
         } catch {
             // no result yet - keep trying
-            keepTrying = true;
+            keepTrying = true
         }
     } while (keepTrying)
 
-    return contributions
+    return response
 }
 
 // get contributions for the given day and return load volumes
-async function _getContributionsOnDate(symbols: Symbols, startDate: dayjs.Dayjs) {
+async function _getContributionsOnDate(params: {symbols: Symbols, startDate: dayjs.Dayjs}) {
     // all results will be stored in this array
     const contributions: Contribution[] = []
     
     // given date to unix ts
-    const ts = startDate.unix()
+    const ts = params.startDate.unix()
 
-    const volume = await loadVolumeForTimestamp(ts, symbols)
+    const volume = await loadVolumeForTimestamp(ts, params.symbols)
     const btc = await loadDaysPrice('bitcoin', ts)
     const eth = await loadDaysPrice('ethereum', ts)
 
@@ -219,5 +219,5 @@ export default async function getContributions(date: string) {
     const givenDate = dayjs.utc(date, "YYYY/MM/DD").startOf('day')
 
     // get contributions for the given date
-    return _retryIfError(_getContributionsOnDate, { symbols,  startDate: givenDate})
+    return _retryIfError(_getContributionsOnDate, { symbols,  startDate: givenDate }) as Promise<Contribution[]>
 }

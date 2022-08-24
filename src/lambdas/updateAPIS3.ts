@@ -87,9 +87,9 @@ export const handler = async function(event: Event, context: { logStreamName: st
         data.body.list = data.body.list.slice(0, 99);
     }
 
-    console.log("Saving to s3 - chart-100.json")
-    // write to today to update chart (we need to place `chart-100-day` here once we know this is correct)
-    await writeToS3('chart-100', data.body, today.format("YYYY-MM-DD"))
+    console.log("Saving to s3 - chart-100-day.json")
+    // write to today to update chart
+    await writeToS3('chart-100-day', data.body, today.format("YYYY-MM-DD"))
     console.log(" - File saved.")
 
     console.log("Saving to s3 - balance.json")

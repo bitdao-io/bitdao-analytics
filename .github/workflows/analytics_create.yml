@@ -8,8 +8,9 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
-      - name: Build Node function
+      - name: Use NodeJS
         uses: actions/setup-node@v3
+      - name: Build Node
         run: yarn install && yarn build
       - name: Move zip file to terraform directory
         run: mv ./dist/update-api-s3.zip ./tf/update-api-s3.zip

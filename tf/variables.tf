@@ -4,17 +4,17 @@ variable "bucket_name" {
 }
 
 variable "bitdao_account" {
-  type        = string
+  type = string
 }
 
 variable "bitdao_api_key" {
-  type        = string
+  type = string
 }
 
 variable "main_rpc_url" {
-  type        = string
+  type = string
 }
 
 variable "web3_rpc_url" {
-  type        = string
+  type = string
 }

@@ -1,11 +1,8 @@
-name: discourse-deploy
+name: analytics-create
 on:
   workflow_dispatch:
     inputs:
-      aws_region:
-        description: "Selects AWS region where analytics will be deployed"
-        required: true
-        default: "us-east-1"
+
 
 jobs:
   terraform:

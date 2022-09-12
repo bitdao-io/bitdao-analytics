@@ -6,6 +6,7 @@ export class Token {
 export class Prices {
     btc: number;
     eth: number;
+    bit: number;
 }
 
 export class Contribution {

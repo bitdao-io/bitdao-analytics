@@ -29,16 +29,6 @@ const getJSON = (uri: string) => new Promise((resolve, reject) => {
 const ContributionBPS = 0.00025
 
 /*
- * ContributionsShares maps currency symbols to proportion of the contribution
- * they should make up.
- */
-const ContributionsShares = {
-    eth: 0.5,
-    usdt: 0.25,
-    usdc: 0.25
-}
-
-/*
  * ContributionStartTime is the timestamp that the contribution pledge started.
  * const ContributionStartTime = 1626307200000;
  */
@@ -58,7 +48,28 @@ function formatContribution(
     tradeVolumeInUSD: number,
     timestamp: number
 ): Contribution {
-    // const contributionVolumeInUSD = prices.btc * tradeVolumeInUSD * ContributionBPS;
+
+    /*
+     * ContributionsShares maps currency symbols to proportion of the contribution
+     * they should make up. 
+     * 
+     * If the requested date is after 09/16/2022 @ 00:00 UTC then everything is converted to BIT...
+     */
+    const ContributionsShares = (timestamp >= 1663282800 
+        ? {
+            eth: 0,
+            usdt: 0,
+            usdc: 0,
+            bit: 1
+        } 
+        : {
+            eth: 0.5,
+            usdt: 0.25,
+            usdc: 0.25,
+            bit: 0
+        }
+    )
+
     const contributionVolumeInUSD = tradeVolumeInUSD * ContributionBPS
 
     const ethAmount = contributionVolumeInUSD * ContributionsShares.eth
@@ -66,6 +77,9 @@ function formatContribution(
 
     const usdtAmount = contributionVolumeInUSD * ContributionsShares.usdt
     const usdcAmount = contributionVolumeInUSD * ContributionsShares.usdc
+
+    const bitAmount = contributionVolumeInUSD * ContributionsShares.bit
+    const bitCount = bitAmount / prices.bit
 
     return {
         date: dayjs.utc(timestamp * 1000).format('YYYY-MM-DD'),
@@ -79,7 +93,10 @@ function formatContribution(
         usdtAmount: parseFloat(usdtAmount.toFixed(0)),
         usdtCount: parseFloat(usdtAmount.toFixed(0)),
         usdcAmount: parseFloat(usdcAmount.toFixed(0)),
-        usdcCount: parseFloat(usdcAmount.toFixed(0))
+        usdcCount: parseFloat(usdcAmount.toFixed(0)),
+
+        bitAmount: parseFloat(bitAmount.toFixed(2)),
+        bitCount: parseFloat(bitCount.toFixed(2)),
     }
 }
 
@@ -92,11 +109,15 @@ async function getPrices(coinID: string, from: number, to: number) {
         `https://api.coingecko.com/api/v3/coins/${coinID}/market_chart/range?vs_currency=usd&from=${from}&to=${to}`
     ) as { prices: number[][] }
     
-    return json.prices.map((price: number[]) => price[1] || 0)
+    // average the days prices
+    return json.prices.map((price: number[]) => price[1] || 0).reduce(({average, items}, price) => ({
+        average: ((items * average) + price) / (items + 1),
+        items: items + 1,
+    }), {average: 0, items: 0}).average
 }
 
 async function loadDaysPrice(coinID: string, timestamp: number) {
-    return (await getPrices(coinID, timestamp, timestamp + 86400))[0]
+    return getPrices(coinID, timestamp, timestamp + 86400)
 }
 
 async function getSymbols(): Promise<Symbols> {
@@ -195,12 +216,14 @@ async function _getContributionsOnDate(params: {symbols: Symbols, startDate: day
     const volume = await loadVolumeForTimestamp(ts, params.symbols)
     const btc = await loadDaysPrice('bitcoin', ts)
     const eth = await loadDaysPrice('ethereum', ts)
+    const bit = await loadDaysPrice('bitdao', ts)
 
     contributions.push(
         formatContribution(
             {
                 btc,
-                eth
+                eth,
+                bit
             },
             volume,
             ts

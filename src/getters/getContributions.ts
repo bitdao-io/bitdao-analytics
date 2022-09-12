@@ -110,10 +110,7 @@ async function getPrices(coinID: string, from: number, to: number) {
     ) as { prices: number[][] }
     
     // average the days prices
-    return json.prices.map((price: number[]) => price[1] || 0).reduce(({average, items}, price) => ({
-        average: ((items * average) + price) / (items + 1),
-        items: items + 1,
-    }), {average: 0, items: 0}).average
+    return json.prices.map((price: number[]) => price[1] || 0)[0]
 }
 
 async function loadDaysPrice(coinID: string, timestamp: number) {

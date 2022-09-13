@@ -84,6 +84,7 @@ function formatContribution(
     return {
         date: dayjs.utc(timestamp * 1000).format('YYYY-MM-DD'),
         ethPrice: parseFloat(prices.eth.toFixed(2)),
+        bitPrice: parseFloat(prices.bit.toFixed(2)),
 
         tradeVolume: parseFloat(tradeVolumeInUSD.toFixed(0)),
         contributeVolume: parseFloat(contributionVolumeInUSD.toFixed(0)),

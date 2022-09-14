@@ -84,7 +84,7 @@ function formatContribution(
     return {
         date: dayjs.utc(timestamp * 1000).format('YYYY-MM-DD'),
         ethPrice: parseFloat(prices.eth.toFixed(2)),
-        bitPrice: parseFloat(prices.bit.toFixed(2)),
+        bitPrice: parseFloat(prices.bit.toFixed(6)),
 
         tradeVolume: parseFloat(tradeVolumeInUSD.toFixed(0)),
         contributeVolume: parseFloat(contributionVolumeInUSD.toFixed(0)),
@@ -97,7 +97,7 @@ function formatContribution(
         usdcCount: parseFloat(usdcAmount.toFixed(0)),
 
         bitAmount: parseFloat(bitAmount.toFixed(2)),
-        bitCount: parseFloat(bitCount.toFixed(2)),
+        bitCount: parseFloat(bitCount.toFixed(6)),
     }
 }
 
@@ -110,7 +110,7 @@ async function getPrices(coinID: string, from: number, to: number) {
         `https://api.coingecko.com/api/v3/coins/${coinID}/market_chart/range?vs_currency=usd&from=${from}&to=${to}`
     ) as { prices: number[][] }
     
-    // average the days prices
+    // price at the start of the day (at 00:00am)
     return json.prices.map((price: number[]) => price[1] || 0)[0]
 }
 

@@ -16,7 +16,6 @@ const {
     web3
 } = newConnections(config)
 
-
 function writeToS3(name: string, body: unknown, date: string): Promise<[string, string]> {
     const json = JSON.stringify({
         success: true,
@@ -34,6 +33,7 @@ export const handler = async function(event: Event, context: { logStreamName: st
     // get start of today in utc
     const today = dayjs.utc()
     const yesterday = today.subtract(1, "day")
+    const lastWeek = today.subtract(6, "day")
 
     // collect an array of every day which will appear in the 100 day results
     const days = [];
@@ -46,27 +46,30 @@ export const handler = async function(event: Event, context: { logStreamName: st
     console.log("Getting last known state from s3 bucket")
     // get the last known good state from the bucket
     const data = await getJSON(s3, config.s3.bucket, 'analytics/chart-100-day.json') as {body: { list: Contribution[] }}
-
-    console.log("Add/update new entries for today/yesterday")
+    
+    console.log("Add new entry for today and update last weeks entry")
     // push new day and update yesterday
     if (data.body.list[0] && data.body.list[0].date === yesterday.format("YYYY-MM-DD")) {
-        console.log(" - last update was yesterday, update and push today")
+        console.log(" - last update was yesterday, update the entry from 7 days ago, then push a new result for today")
         
         // record the old vol total
-        const oldVol = data.body.list[0].contributeVolume;
+        const oldVol = data.body.list[6].contributeVolume;
 
-        // update yesterday
-        data.body.list.splice(0, 1, (await getContributions(yesterday.format("YYYY/MM/DD")))[0]);
-        // add today
+        // update lastWeek (entry from 7 days ago)
+        if (data.body.list[6].date === lastWeek.format("YYYY-MM-DD").toString()) {
+          data.body.list.splice(6, 1, (await getContributions(lastWeek.format("YYYY/MM/DD")))[0]);
+        }
+        
+        // add todays entry (push the entry to the front of the list)
         data.body.list.splice(0, 0, (await getContributions(today.format("YYYY/MM/DD")))[0]);
 
-        // save in the logs that yesterdays result has changed
-        if (oldVol !== data.body.list[1].contributeVolume) {
-            console.log(" -- yesterdays contributionVolume has changed", oldVol, " => ", data.body.list[1].contributeVolume)
+        // save in the logs that lastWeeks result has changed
+        if (oldVol !== data.body.list[7].contributeVolume) {
+            console.log(" -- lastWeeks contributionVolume has changed", oldVol, " => ", data.body.list[7].contributeVolume)
         }
     } else if (data.body.list[0] && data.body.list[0].date === today.format("YYYY-MM-DD")) {
         console.log(" - last update was earlier today, update todays results only")
-        // update today (yesterday already up to date)
+        // update today (replace the entry in the list)
         data.body.list.splice(0, 1, (await getContributions(today.format("YYYY/MM/DD")))[0]);
     }
 

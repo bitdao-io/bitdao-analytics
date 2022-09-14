@@ -46,7 +46,7 @@ export const handler = async function(event: Event, context: { logStreamName: st
     console.log("Getting last known state from s3 bucket")
     // get the last known good state from the bucket
     const data = await getJSON(s3, config.s3.bucket, 'analytics/chart-100-day.json') as {body: { list: Contribution[] }}
-    
+
     console.log("Add/update new entries for today/yesterday")
     // push new day and update yesterday
     if (data.body.list[0] && data.body.list[0].date === yesterday.format("YYYY-MM-DD")) {
@@ -74,10 +74,19 @@ export const handler = async function(event: Event, context: { logStreamName: st
     // add missing entries
     let pointer = 0;
     for(const iday of days) {
+        // fill any missing entries
         if (iday !== data.body?.list?.[pointer]?.date) {
             console.log(` - missing entry ${pointer} - ${iday}`)
             data.body.list.splice(pointer, 0, (await getContributions(iday.replace(/-/g, "/")))[0])
         }
+
+        // upgrade the schema to include bitAmount and count (if missing)
+        if (data.body?.list?.[pointer] && typeof data.body?.list?.[pointer].bitAmount === "undefined") {
+            data.body.list[pointer].bitAmount = 0;
+            data.body.list[pointer].bitCount = 0;
+        }
+
+        // point to the next day
         pointer++
     }
 

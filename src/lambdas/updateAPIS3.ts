@@ -33,12 +33,15 @@ export const handler = async function(event: Event, context: { logStreamName: st
     // get start of today in utc
     const today = dayjs.utc()
     const yesterday = today.subtract(1, "day")
-    const lastWeek = today.subtract(6, "day")
+    const lastWeek = today.subtract(7, "day")
 
-    // collect an array of every day which will appear in the 100 day results
+    // collect an array of every day which will appear in the chart results
     const days = [];
+    // ensures we have every day from start of this collection to today
+    const forDays = today.diff(dayjs.utc("2021/07/14", "YYYY/MM/DD"), "days") + 1;
+    // day is moved back a day for each day in the forDays range
     let day = dayjs.utc(today);
-    for (let i=1; i < 100; i++){
+    for (let i=1; i < forDays; i++){
         days.push(day.format("YYYY-MM-DD"))
         day = day.subtract(1, "day")
     }
@@ -91,12 +94,6 @@ export const handler = async function(event: Event, context: { logStreamName: st
 
         // point to the next day
         pointer++
-    }
-
-    console.log("Trim list to 100 entries")
-    // drop results so that we only ever have 100 items in here
-    if (data.body.list.length > 100) {
-        data.body.list = data.body.list.slice(0, 99);
     }
 
     console.log("Saving to s3 - chart-100-day.json")

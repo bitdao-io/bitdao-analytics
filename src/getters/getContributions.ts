@@ -153,23 +153,19 @@ async function loadVolume(symbols: string[], symbolType: string, from: number) {
 
         // Load the data
         const body = (await req).result
-        if (!body || !body.length) {
-            return volume
-        }
+        if (body && body.length) {
+            // Grab the volume based on the symbol type
+            const innerBody = body[0]
+            let _volume = parseFloat(innerBody.volume)
+            if (symbolType === 'perp') {
+                _volume = parseFloat(innerBody.turnover)
+            }
 
-        // Grab the volume based on the symbol type
-        const innerBody = body[0]
-        let _volume = parseFloat(innerBody.volume)
-        if (symbolType === 'perp') {
-            _volume = parseFloat(innerBody.turnover)
+            // Accumulate the volume
+            if (innerBody.open_time >= from && innerBody.open_time <= from + 86400) {
+                volume = volume + _volume
+            }
         }
-
-        if (innerBody.open_time < from || innerBody.open_time > from + 86400) {
-            return volume
-        }
-
-        // Accumulate the volume
-        volume = volume + _volume
     }
 
     return volume

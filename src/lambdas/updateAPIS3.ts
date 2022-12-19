@@ -53,7 +53,7 @@ export const handler = async function(event: Event, context: { logStreamName: st
     console.log("Add new entry for today and update last weeks entry")
     // push new day and update yesterday
     if (data.body.list[0] && data.body.list[0].date === yesterday.format("YYYY-MM-DD")) {
-        console.log(" - last update was yesterday, update the entry from 7 days ago, then push a new result for today")
+        console.log(" - last update was yesterday, update the entry from 7 days ago, then yesterday, then push a new result for today")
         
         // record the old vol total
         const oldVol = data.body.list[6].contributeVolume;
@@ -63,13 +63,29 @@ export const handler = async function(event: Event, context: { logStreamName: st
           data.body.list.splice(6, 1, (await getContributions(lastWeek.format("YYYY/MM/DD")))[0]);
         }
         
-        // add todays entry (push the entry to the front of the list)
-        data.body.list.splice(0, 0, (await getContributions(today.format("YYYY/MM/DD")))[0]);
-
         // save in the logs that lastWeeks result has changed
-        if (oldVol !== data.body.list[7].contributeVolume) {
-            console.log(" -- lastWeeks contributionVolume has changed", oldVol, " => ", data.body.list[7].contributeVolume)
+        if (oldVol !== data.body.list[6].contributeVolume) {
+            console.log(" -- lastWeeks contributionVolume has changed", oldVol, " => ", data.body.list[6].contributeVolume)
         }
+
+        // update yesterdays entry (update the entry at the top of the list)
+        data.body.list.splice(0, 1, (await getContributions(yesterday.format("YYYY/MM/DD")))[0]);
+        // add todays entry (push the entry to the front of the list - no need to generate numbers yet this would be a partial result...)
+        data.body.list.splice(0, 0, {
+          date: today.format("YYYY-MM-DD"),
+          tradeVolume: 0,
+          contributeVolume: 0,
+          ethCount: 0,
+          ethPrice: 0,
+          bitPrice: 0,
+          ethAmount: 0,
+          usdtAmount: 0,
+          usdtCount: 0,
+          usdcAmount: 0,
+          usdcCount: 0,
+          bitAmount: 0,
+          bitCount: 0
+        });
     } else if (data.body.list[0] && data.body.list[0].date === today.format("YYYY-MM-DD")) {
         console.log(" - last update was earlier today, update todays results only")
         // update today (replace the entry in the list)

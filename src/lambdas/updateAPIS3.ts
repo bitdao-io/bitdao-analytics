@@ -96,17 +96,6 @@ export const handler = async function(event: Event, context: { logStreamName: st
     // add missing entries
     let pointer = 0;
     for(const iday of days) {
-        // fix data following BIP-20 (update lambda before 2023-04-06):
-        if (dayjs(iday).isAfter('2023-02-28', 'days') && dayjs(iday).isBefore('2023-04-06', 'days')) {
-            console.log("clear contribution data for", iday);
-            data.body.list.splice(pointer, 1, {
-                ...data.body.list[pointer],
-                contributeVolume: 0,
-                bitAmount: 0,
-                bitCount: 0,
-            })
-        }
-
         // fill any missing entries
         if (iday !== data.body?.list?.[pointer]?.date) {
             console.log(` - missing entry ${pointer} - ${iday}`)

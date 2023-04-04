@@ -103,7 +103,7 @@ function formatContribution(
             // months are 0 indexed
             const month = dayjs(timestamp).month() + 1;
             // move back a year for the first 3 months
-            const year = dayjs(timestamp).year() - (month < 4 ? 1 : 0);
+            const year = dayjs(timestamp).year() - (month < 3 ? 1 : 0);
             // default to 0 if we don't have an entry (any date after 2026)
             const amount = bip20[`${year}-04-20`] || 0;
             // applying the contribution on the 20th of each month only

@@ -141,7 +141,10 @@ function normalizeSymbol(symbol: string) {
 
 async function getPrices(coinID: string, from: number, to: number) {
     const json = await getJSON(
-        `https://api.coingecko.com/api/v3/coins/${coinID}/market_chart/range?vs_currency=usd&from=${from}&to=${to}`
+        `https://${process.env.COIN_GECKO_API_KEY 
+            ? 'pro-api' 
+            : 'api'
+        }.coingecko.com/api/v3/coins/${coinID}/market_chart/range?vs_currency=usd&from=${from}&to=${to}${process.env.COIN_GECKO_API_KEY ? `&x_cg_pro_api_key=${process.env.COIN_GECKO_API_KEY}` : ``}`
     ) as { prices: number[][] }
     
     // price at the start of the day (at 00:00am)

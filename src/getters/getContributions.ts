@@ -70,7 +70,7 @@ function formatContribution(
         }
     )
 
-    const contributionVolumeInUSD = tradeVolumeInUSD * ContributionBPS
+    let contributionVolumeInUSD = tradeVolumeInUSD * ContributionBPS
 
     const ethAmount = contributionVolumeInUSD * ContributionsShares.eth
     const ethCount = ethAmount / prices.eth
@@ -78,8 +78,42 @@ function formatContribution(
     const usdtAmount = contributionVolumeInUSD * ContributionsShares.usdt
     const usdcAmount = contributionVolumeInUSD * ContributionsShares.usdc
 
-    const bitAmount = contributionVolumeInUSD * ContributionsShares.bit
-    const bitCount = bitAmount / prices.bit
+    let bitAmount = contributionVolumeInUSD * ContributionsShares.bit
+    let bitCount = bitAmount / prices.bit
+
+    /*
+     * BIP-20 schedules contributions for the 20th of each month:
+     * 12months @ 120,000,000
+     * 12months @ 60,000,000
+     * 12months @ 30,000,000
+     * 12months @ 15,000,000
+     */
+    const bip20 = {
+        '2023-04-20': 120000000,
+        '2024-04-20': 60000000,
+        '2025-04-20': 30000000,
+        '2026-04-20': 15000000,
+    } as Record<string, number>;
+    // contribution based on volume ends 2023-03-01...
+    if (dayjs(timestamp).isAfter("2023-02-28", "days")) {
+        // we're not making a contribution based on volume anymore
+        contributionVolumeInUSD = 0;
+        // place the contribution on the the 20th of each month instead following BIP-20
+        if (dayjs(timestamp).date() === 20) {
+            // months are 0 indexed
+            const month = dayjs(timestamp).month() + 1;
+            // move back a year for the first 3 months
+            const year = dayjs(timestamp).year() - (month < 4 ? 1 : 0);
+            // default to 0 if we don't have an entry (any date after 2026)
+            const amount = bip20[`${year}-04-20`] || 0;
+            // applying the contribution on the 20th of each month only
+            bitAmount = amount * prices.bit;
+            bitCount = amount;
+        } else {
+            bitAmount = 0;
+            bitCount = 0;
+        }
+    }
 
     return {
         date: dayjs.utc(timestamp * 1000).format('YYYY-MM-DD'),
@@ -107,7 +141,10 @@ function normalizeSymbol(symbol: string) {
 
 async function getPrices(coinID: string, from: number, to: number) {
     const json = await getJSON(
-        `https://api.coingecko.com/api/v3/coins/${coinID}/market_chart/range?vs_currency=usd&from=${from}&to=${to}`
+        `https://${process.env.COIN_GECKO_API_KEY 
+            ? 'pro-api' 
+            : 'api'
+        }.coingecko.com/api/v3/coins/${coinID}/market_chart/range?vs_currency=usd&from=${from}&to=${to}${process.env.COIN_GECKO_API_KEY ? `&x_cg_pro_api_key=${process.env.COIN_GECKO_API_KEY}` : ``}`
     ) as { prices: number[][] }
     
     // price at the start of the day (at 00:00am)

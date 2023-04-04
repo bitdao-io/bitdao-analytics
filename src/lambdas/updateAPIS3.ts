@@ -102,6 +102,14 @@ export const handler = async function(event: Event, context: { logStreamName: st
             data.body.list.splice(pointer, 0, (await getContributions(iday.replace(/-/g, "/")))[0])
         }
 
+        // fix data following BIP-20 (update lambda before 2023-04-06):
+        if (dayjs(iday).isAfter('2023-02-28', 'days') && dayjs(iday).isBefore('2023-04-06', 'days')) {
+            console.log("clear contribution data for", iday, '-', data.body.list[pointer].date);
+            data.body.list[pointer].contributeVolume = 0;
+            data.body.list[pointer].bitCount = 0;
+            data.body.list[pointer].bitAmount = 0;
+        }
+        
         // upgrade the schema to include bitAmount and count (if missing)
         if (data.body?.list?.[pointer] && typeof data.body?.list?.[pointer].bitAmount === "undefined") {
             data.body.list[pointer].bitAmount = 0;

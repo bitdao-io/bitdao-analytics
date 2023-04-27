@@ -95,7 +95,7 @@ function formatContribution(
         '2026-04-20': 15000000,
     } as Record<string, number>;
     // contribution based on volume ends 2023-03-01...
-    if (dayjs(timestamp).isAfter("2023-02-28", "days")) {
+    if (dayjs(timestamp * 1000).isAfter("2023-02-28", "days")) {
         // we're not making a contribution based on volume anymore
         contributionVolumeInUSD = 0;
         // place the contribution on the the 20th of each month instead following BIP-20

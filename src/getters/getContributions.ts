@@ -109,9 +109,11 @@ function formatContribution(
             // applying the contribution on the 20th of each month only
             bitAmount = amount * prices.bit;
             bitCount = amount;
+            contributionVolumeInUSD = bitAmount;
         } else {
             bitAmount = 0;
             bitCount = 0;
+            contributionVolumeInUSD = 0;
         }
     }
 

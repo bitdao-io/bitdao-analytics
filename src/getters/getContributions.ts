@@ -99,11 +99,11 @@ function formatContribution(
         // we're not making a contribution based on volume anymore
         contributionVolumeInUSD = 0;
         // place the contribution on the the 20th of each month instead following BIP-20
-        if (dayjs(timestamp).date() === 20) {
+        if (dayjs(timestamp * 1000).date() === 20) {
             // months are 0 indexed
-            const month = dayjs(timestamp).month() + 1;
+            const month = dayjs(timestamp * 1000).month() + 1;
             // move back a year for the first 3 months
-            const year = dayjs(timestamp).year() - (month < 4 ? 1 : 0);
+            const year = dayjs(timestamp * 1000).year() - (month < 4 ? 1 : 0);
             // default to 0 if we don't have an entry (any date after 2026)
             const amount = bip20[`${year}-04-20`] || 0;
             // applying the contribution on the 20th of each month only
